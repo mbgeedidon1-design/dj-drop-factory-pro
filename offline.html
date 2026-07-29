@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - DJ Drop Factory</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #050508;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .icon { font-size: 72px; margin-bottom: 20px; opacity: 0.5; }
+        h1 { font-size: 24px; font-weight: 800; margin-bottom: 12px; }
+        p { font-size: 16px; color: #a0a0b0; line-height: 1.5; max-width: 300px; margin-bottom: 24px; }
+        .btn {
+            padding: 14px 28px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #ff6b35, #e85d04);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="icon">📴</div>
+    <h1>You are Offline</h1>
+    <p>DJ Drop Factory needs an internet connection to generate new drops. Check your connection and try again.</p>
+    <a href="/" class="btn">Try Again</a>
+</body>
+</html>
