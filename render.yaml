@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: dj-drop-factory-pro
+    runtime: python
+    plan: free
+    aptPackages:
+      - espeak-ng
+      - ffmpeg
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
