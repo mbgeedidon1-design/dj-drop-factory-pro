@@ -46,6 +46,12 @@
             font-weight: 400;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            overscroll-behavior-y: none;
+        }
+        button, .tab-item, .segment, .suggestion-chip, .effect-chip, .string-tool-btn, .nav-btn, .player-btn, .delete-btn, .library-item, .discover-card, .data-item {
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .bg-glow {
@@ -186,6 +192,7 @@
             backdrop-filter: blur(12px);
         }
         .feature-item strong { display: block; margin-bottom: 3px; font-size: 12px; }
+        .feature-band > * { min-width: 0; }
 
         /* Section Cards */
         .section-card {
@@ -635,8 +642,6 @@
             animation: pulse 2s infinite; display: inline-block;
         }
 
-        to { transform: translateY(0); } }
-
         /* Responsive */
         @media (min-width: 431px) {
             body { background: #111; }
@@ -799,6 +804,8 @@
                 <div class="feature-item"><strong>AI Scripts</strong>Fast, ready-to-use copy</div>
                 <div class="feature-item"><strong>Studio FX</strong>Voice effects and presets</div>
                 <div class="feature-item"><strong>Creator Toolkit</strong>Growth, software, and promo ideas</div>
+            </div>
+
             <!-- Mode Selector -->
             <div class="segmented-control" role="tablist">
                 <button class="segment active" onclick="setMode('ai', this)">AI Drop</button>

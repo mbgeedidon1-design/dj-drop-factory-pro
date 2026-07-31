@@ -112,3 +112,15 @@ def test_studio_presets_endpoint_returns_creative_options():
     assert data["success"] is True
     assert "club_banger" in data["presets"]
     assert data["presets"]["club_banger"]["effect"] == "club"
+
+
+def test_homepage_template_has_stable_mobile_ui_structure():
+    client = app.app.test_client()
+    response = client.get("/")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "class=\"feature-band\"" in html
+    assert "class=\"segmented-control\"" in html
+    assert "touch-action: manipulation;" in html
+    assert "to { transform: translateY(0); }" not in html
