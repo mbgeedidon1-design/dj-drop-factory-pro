@@ -61,6 +61,14 @@ DISCOVER_DATA = {
         {"name": "Met Opera on Demand", "content_type": "Opera", "region": "USA / Global"},
         {"name": "Royal Opera House Stream", "content_type": "Ballet / Opera", "region": "UK / Global"},
     ],
+    "music_networks": [
+        {"name": "Mixcloud", "focus": "DJ sets and radio shows", "region": "Global", "type": "Streaming"},
+        {"name": "Boomplay", "focus": "Afrobeats and African music", "region": "Africa", "type": "Streaming"},
+        {"name": "Audiomack", "focus": "Independent releases and discovery", "region": "Global", "type": "Music"},
+        {"name": "Beatport", "focus": "Club-ready tracks and charts", "region": "Global", "type": "DJ Music"},
+        {"name": "Resident Advisor", "focus": "Club events and scene discovery", "region": "Global", "type": "Community"},
+        {"name": "Traxsource", "focus": "House, techno, and underground music", "region": "Global", "type": "DJ Music"},
+    ],
 }
 
 def search_discover(query):

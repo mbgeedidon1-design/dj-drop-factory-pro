@@ -270,11 +270,11 @@ def process_voice():
     audio_file.save(target_path)
 
     processed_path = audio_processor.apply_voice_effect(target_path, effect)
-    relative_path = os.path.relpath(processed_path, os.path.join(app.root_path, "static"))
+    filename = os.path.basename(processed_path)
     return jsonify({
         "success": True,
         "effect": effect,
-        "audio_url": f"/{relative_path.replace(os.sep, '/')}",
+        "audio_url": f"/static/generated/uploads/{filename}",
         "processing": {
             "applied": os.path.exists(processed_path),
             "source": "upload",
