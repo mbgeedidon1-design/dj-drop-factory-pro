@@ -5,6 +5,7 @@ services:
     plan: free
     aptPackages:
       - espeak-ng
+      - espeak
       - ffmpeg
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
