@@ -1,5 +1,6 @@
 import io
 import sys
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -54,7 +55,7 @@ def test_string_tools_endpoint_formats_text():
 def test_auth_register_and_login_flow():
     client = app.app.test_client()
     username = "tester"
-    email = "tester@example.com"
+    email = f"tester_{uuid.uuid4().hex[:8]}@example.com"
 
     register_response = client.post(
         "/api/auth/register",
