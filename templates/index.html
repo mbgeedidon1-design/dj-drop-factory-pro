@@ -1233,12 +1233,59 @@
 
             <div class="section-card">
                 <div class="section-header">👤 Account</div>
-                <div style="padding: 16px 20px; display: flex; align-items: center; gap: 14px;">
-                    <div style="width: 56px; height: 56px; border-radius: 18px; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</div>
-                    <div>
-                        <div style="font-size: 17px; font-weight: 700;">Your username</div>
-                        <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">your email i.e example@gmail.com</div>
+                <div id="authPanel" style="padding: 16px 20px;">
+                    <div id="authSignedOut" style="display:block;">
+                        <div class="form-group" style="padding:0 0 12px;">
+                            <label class="form-label" for="accountName">Your name</label>
+                            <input class="form-input" id="accountName" placeholder="Enter your name">
+                        </div>
+                        <div class="form-group" style="padding:0 0 12px;">
+                            <label class="form-label" for="accountEmail">Email</label>
+                            <input class="form-input" id="accountEmail" type="email" placeholder="you@example.com">
+                        </div>
+                        <div class="form-group" style="padding:0 0 12px;">
+                            <label class="form-label" for="accountPassword">Password</label>
+                            <input class="form-input" id="accountPassword" type="password" placeholder="Create a secure password">
+                        </div>
+                        <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="registerAccount()">Create account</button>
+                        <button class="btn-secondary" style="margin:0; width:100%;" onclick="loginAccount()">Sign in</button>
                     </div>
+                    <div id="authSignedIn" style="display:none;">
+                        <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+                            <div style="width:56px; height:56px; border-radius:18px; background:linear-gradient(135deg, var(--accent), var(--purple)); display:flex; align-items:center; justify-content:center; font-size:24px;">👤</div>
+                            <div>
+                                <div id="profileName" style="font-size:17px; font-weight:700;"></div>
+                                <div id="profileEmail" style="font-size:13px; color:var(--text-muted); margin-top:2px;"></div>
+                            </div>
+                        </div>
+                        <button class="btn-secondary" style="margin:0; width:100%;" onclick="logoutAccount()">Sign out</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">🚀 Creator Toolkit</div>
+                <div style="padding: 16px 20px;">
+                    <div class="form-group" style="padding:0 0 12px;">
+                        <label class="form-label" for="toolkitGoal">Goal</label>
+                        <select class="form-select" id="toolkitGoal">
+                            <option value="youtube">YouTube growth</option>
+                            <option value="software">DJ software selection</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="padding:0 0 12px;">
+                        <label class="form-label" for="toolkitGenre">Genre</label>
+                        <select class="form-select" id="toolkitGenre">
+                            <option value="club_banger">Club Banger</option>
+                            <option value="amapiano">Amapiano</option>
+                            <option value="dancehall">Dancehall</option>
+                            <option value="afrobeat">Afrobeat</option>
+                            <option value="trap">Trap</option>
+                            <option value="radio">Radio</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="loadCreatorToolkit()">Get recommendations</button>
+                    <div id="creatorToolkitResults" style="display:none; padding-top:8px;"></div>
                 </div>
             </div>
 
@@ -2296,6 +2343,112 @@
                         }
                     });
             }, 400);
+        }
+
+        // ==================== AUTH + CREATOR TOOLS ====================
+        async function registerAccount() {
+            const name = document.getElementById('accountName').value.trim();
+            const email = document.getElementById('accountEmail').value.trim();
+            const password = document.getElementById('accountPassword').value;
+            if (!name || !email || !password) { showToast('⚠️ Fill in your name, email, and password'); return; }
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('dj_drop_auth_token', data.token);
+                    localStorage.setItem('dj_drop_user', JSON.stringify(data.user));
+                    renderAuth();
+                    showToast('✅ Account created successfully');
+                } else {
+                    showToast('❌ ' + (data.error || 'Registration failed'));
+                }
+            } catch (err) {
+                showToast('❌ Network error');
+            }
+        }
+
+        async function loginAccount() {
+            const email = document.getElementById('accountEmail').value.trim();
+            const password = document.getElementById('accountPassword').value;
+            if (!email || !password) { showToast('⚠️ Enter your email and password'); return; }
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('dj_drop_auth_token', data.token);
+                    localStorage.setItem('dj_drop_user', JSON.stringify(data.user));
+                    renderAuth();
+                    showToast('✅ Signed in successfully');
+                } else {
+                    showToast('❌ ' + (data.error || 'Login failed'));
+                }
+            } catch (err) {
+                showToast('❌ Network error');
+            }
+        }
+
+        function logoutAccount() {
+            localStorage.removeItem('dj_drop_auth_token');
+            localStorage.removeItem('dj_drop_user');
+            renderAuth();
+            showToast('👋 Signed out');
+        }
+
+        function renderAuth() {
+            const signedOut = document.getElementById('authSignedOut');
+            const signedIn = document.getElementById('authSignedIn');
+            const token = localStorage.getItem('dj_drop_auth_token');
+            const user = JSON.parse(localStorage.getItem('dj_drop_user') || 'null');
+            if (token && user) {
+                signedOut.style.display = 'none';
+                signedIn.style.display = 'block';
+                document.getElementById('profileName').textContent = user.name || 'Creator';
+                document.getElementById('profileEmail').textContent = user.email || '';
+            } else {
+                signedOut.style.display = 'block';
+                signedIn.style.display = 'none';
+            }
+        }
+
+        async function loadCreatorToolkit() {
+            const goal = document.getElementById('toolkitGoal').value;
+            const genre = document.getElementById('toolkitGenre').value;
+            const panel = document.getElementById('creatorToolkitResults');
+            panel.style.display = 'block';
+            panel.innerHTML = '<div style="color:var(--text-muted);">Loading recommendations…</div>';
+            try {
+                const res = await fetch(`/api/creator-toolkit?goal=${goal}&genre=${genre}`);
+                const data = await res.json();
+                if (data.success) {
+                    const software = data.software_matches.map(item => `<li><strong>${escapeHtml(item.name)}</strong> — ${escapeHtml(item.reason)} <span style="color:var(--accent);">(${escapeHtml(item.level)})</span></li>`).join('');
+                    const hooks = data.youtube_hooks.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+                    const prompts = data.launch_prompts.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+                    panel.innerHTML = `
+                        <div style="background:var(--bg-input); border-radius:12px; padding:12px; margin-bottom:10px;">
+                            <div style="font-weight:700; margin-bottom:6px;">Recommended software</div>
+                            <ul style="padding-left:16px; color:var(--text-secondary); line-height:1.6;">${software}</ul>
+                        </div>
+                        <div style="background:var(--bg-input); border-radius:12px; padding:12px; margin-bottom:10px;">
+                            <div style="font-weight:700; margin-bottom:6px;">YouTube hooks</div>
+                            <ul style="padding-left:16px; color:var(--text-secondary); line-height:1.6;">${hooks}</ul>
+                        </div>
+                        <div style="background:var(--bg-input); border-radius:12px; padding:12px;">
+                            <div style="font-weight:700; margin-bottom:6px;">Launch prompts</div>
+                            <ul style="padding-left:16px; color:var(--text-secondary); line-height:1.6;">${prompts}</ul>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                panel.innerHTML = '<div style="color:var(--error);">Recommendations unavailable right now.</div>';
+            }
         }
 
         // ==================== PWA ====================

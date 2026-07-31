@@ -1,7 +1,11 @@
+import hashlib
+import hmac
 import os
 import re
+import time
 import uuid
 from flask import Flask, jsonify, render_template, request, send_from_directory
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 from config import Config
@@ -18,6 +22,39 @@ app.config["UPLOAD_FOLDER"] = os.path.join(Config.STATIC_DIR, "generated", "uplo
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 tts_engine = TTSManager()
+
+
+def _issue_token(user_id):
+    timestamp = int(time.time())
+    payload = f"{user_id}:{timestamp}"
+    signature = hmac.new(app.config["SECRET_KEY"].encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{payload}:{signature}"
+
+
+def _decode_token(token):
+    if not token:
+        return None
+    parts = token.split(":")
+    if len(parts) != 3:
+        return None
+    user_id, timestamp, signature = parts
+    payload = f"{user_id}:{timestamp}"
+    expected = hmac.new(app.config["SECRET_KEY"].encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        return None
+    if abs(int(time.time()) - int(timestamp)) > 7 * 24 * 60 * 60:
+        return None
+    return int(user_id)
+
+
+def get_authenticated_user():
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        user_id = _decode_token(token)
+        if user_id:
+            return db.get_user_by_id(user_id)
+    return None
 
 
 def build_generation_response(script, final_path, cover_filename, drop_id, tts_result, fx_mode):
@@ -88,7 +125,8 @@ def status():
             "AI voice generation",
             "Premium audio processing",
             "Library management",
-            "Discover marketplace insights",
+            "Creator studio tools",
+            "Account-based workflow",
         ],
         "generated_count": stats.get("total_drops", 0),
     })
@@ -213,6 +251,98 @@ def string_tools():
         result = text
 
     return jsonify({"success": True, "result": result})
+
+
+@app.post("/api/auth/register")
+def register_user():
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    password = (data.get("password") or "").strip()
+
+    if not name or not email or not password:
+        return jsonify({"success": False, "error": "Name, email, and password are required"}), 400
+    if len(password) < 6:
+        return jsonify({"success": False, "error": "Password must be at least 6 characters"}), 400
+
+    existing = db.get_user_by_email(email)
+    if existing:
+        return jsonify({"success": False, "error": "A user with that email already exists"}), 409
+
+    user = db.create_user({"name": name, "email": email, "password": password})
+    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"]}, "token": _issue_token(user["id"])})
+
+
+@app.post("/api/auth/login")
+def login_user():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    password = (data.get("password") or "").strip()
+
+    if not email or not password:
+        return jsonify({"success": False, "error": "Email and password are required"}), 400
+
+    user = db.get_user_by_email(email)
+    if not user or not check_password_hash(user["password_hash"], password):
+        return jsonify({"success": False, "error": "Invalid email or password"}), 401
+
+    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"]}, "token": _issue_token(user["id"])})
+
+
+@app.get("/api/auth/me")
+def current_user():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"]}})
+
+
+@app.get("/api/creator-toolkit")
+def creator_toolkit():
+    goal = (request.args.get("goal") or "youtube").lower()
+    genre = (request.args.get("genre") or "club_banger").lower()
+    genre_labels = {
+        "amapiano": "Amapiano",
+        "dancehall": "Dancehall",
+        "radio": "Radio",
+        "club_banger": "Club Banger",
+        "afrobeat": "Afrobeat",
+        "trap": "Trap",
+    }
+
+    software_matches = [
+        {"name": "Serato DJ Pro", "reason": "Best for polished live sets and club-ready cueing.", "level": "Pro"},
+        {"name": "Rekordbox", "reason": "Excellent for organizers and performers who need reliable export workflows.", "level": "Beginner-Pro"},
+        {"name": "VirtualDJ", "reason": "A flexible option for creators building a fast, modern setup.", "level": "Beginner"},
+    ]
+
+    if goal == "software":
+        software_matches = [
+            {"name": "DJay Pro AI", "reason": "Ideal for creators who want AI-assisted workflow and smooth mobile control.", "level": "Beginner-Pro"},
+            {"name": "Serato DJ Pro", "reason": "Great for professional club and event performance setups.", "level": "Pro"},
+            {"name": "Mixxx", "reason": "A strong free option for learning and experimenting.", "level": "Free"},
+        ]
+
+    youtube_hooks = [
+        f"Show the {genre_labels.get(genre, genre)} energy in the first 5 seconds of your teaser.",
+        "Use a fast hook, sharp cuts, and a clean CTA to convert viewers into followers.",
+        "Pair the drop with a strong caption and a cross-platform promo line.",
+    ]
+
+    launch_prompts = [
+        f"Launch a {genre_labels.get(genre, genre)} campaign with one premium intro drop and one teaser clip.",
+        "Publish a short behind-the-scenes clip to build anticipation before the full drop release.",
+        "Use your saved library to create a release pack for DJs, promoters, and radio hosts.",
+    ]
+
+    return jsonify({
+        "success": True,
+        "goal": goal,
+        "genre": genre_labels.get(genre, genre),
+        "software_matches": software_matches,
+        "youtube_hooks": youtube_hooks,
+        "launch_prompts": launch_prompts,
+    })
 
 
 @app.get("/api/library")

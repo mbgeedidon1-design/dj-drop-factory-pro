@@ -48,3 +48,35 @@ def test_string_tools_endpoint_formats_text():
     data = response.get_json()
     assert data["success"] is True
     assert data["result"] == "Hello World"
+
+
+def test_auth_register_and_login_flow():
+    client = app.app.test_client()
+    username = "tester"
+    email = "tester@example.com"
+
+    register_response = client.post(
+        "/api/auth/register",
+        json={"name": username, "email": email, "password": "StrongPass123!"},
+    )
+    assert register_response.status_code == 200
+    register_data = register_response.get_json()
+    assert register_data["success"] is True
+    assert register_data["user"]["email"] == email
+
+    login_response = client.post(
+        "/api/auth/login",
+        json={"email": email, "password": "StrongPass123!"},
+    )
+    assert login_response.status_code == 200
+    login_data = login_response.get_json()
+    assert login_data["success"] is True
+    assert login_data["token"]
+
+    me_response = client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {login_data['token']}"},
+    )
+    assert me_response.status_code == 200
+    me_data = me_response.get_json()
+    assert me_data["user"]["email"] == email

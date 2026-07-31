@@ -2,6 +2,7 @@
 import sqlite3
 import os
 from datetime import datetime
+from werkzeug.security import generate_password_hash
 from config import Config
 
 class Database:
@@ -49,8 +50,50 @@ class Database:
             )
         """)
 
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP
+            )
+        """)
+
         conn.commit()
         conn.close()
+
+    def create_user(self, user_data):
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        password_hash = generate_password_hash(user_data.get("password", ""))
+        try:
+            cursor.execute(
+                "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+                (user_data.get("name", "User"), user_data.get("email", ""), password_hash),
+            )
+            conn.commit()
+            user_id = cursor.lastrowid
+            return {"id": user_id, "name": user_data.get("name", "User"), "email": user_data.get("email", "")}
+        finally:
+            conn.close()
+
+    def get_user_by_email(self, email):
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def get_user_by_id(self, user_id):
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
 
     def add_drop(self, drop_data):
         conn = self._get_conn()
