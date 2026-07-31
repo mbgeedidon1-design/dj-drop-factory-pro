@@ -196,9 +196,13 @@ class AudioProcessor:
         shutil.copy(vocal_path, output_path)
         return output_path
     
+    def _build_output_path(self, audio_path, suffix):
+        base, _ = os.path.splitext(audio_path)
+        return f"{base}{suffix}.mp3"
+
     def apply_voice_effect(self, audio_path, effect):
         """Apply voice effect using FFmpeg"""
-        output_path = audio_path.replace(".mp3", f"_effect_{effect}.mp3")
+        output_path = self._build_output_path(audio_path, f"_effect_{effect}")
         
         if not self.ffmpeg_available:
             import shutil
@@ -206,6 +210,7 @@ class AudioProcessor:
             return output_path
         
         effect_filters = {
+            "none": "anull",
             "helium": "asetrate=48000*1.5,aresample=48000",
             "low": "asetrate=48000*0.7,aresample=48000",
             "robot": "afftfilt=real='hypot(re,im)*cos((random(0)*2-1)*2*3.14)':imag='hypot(re,im)*sin((random(0)*2-1)*2*3.14)':win_size=512:overlap=0.75",
@@ -213,10 +218,16 @@ class AudioProcessor:
             "phone": "highpass=f=300,lowpass=f=3400,acrusher=mix=0.1:mode=log:lvl=10",
             "slow": "atempo=0.7,asetrate=48000*0.85,aresample=48000",
             "fast": "atempo=1.5,asetrate=48000*1.2,aresample=48000",
+            "vintage": "aecho=0.7:0.8:300|600:0.2|0.15,aphaser=0.8:0.74:2:0.5:0.5",
+            "bass_boost": "bass=g=8",
+            "wide": "stereotools=mix=0.8:balance=0.2",
+            "club": "highpass=f=80,lowpass=f=16000,eq=1:0.8:0.8:0.9:1:1.2:1.3",
+            "cinematic": "highpass=f=60,lowpass=f=14000,compand=0.3|0.3:1|1:-70/-70|-20/-20:0:-90:0.2",
+            "reverb": "aecho=0.8:0.9:1000|1800:0.3|0.25",
         }
         
-        filt = effect_filters.get(effect)
-        if filt:
+        filt = effect_filters.get(effect, effect_filters["none"])
+        if filt != "anull":
             cmd = [
                 "ffmpeg", "-y", "-i", audio_path,
                 "-af", filt,
@@ -226,6 +237,9 @@ class AudioProcessor:
                 output_path
             ]
             subprocess.run(cmd, capture_output=True)
+        else:
+            import shutil
+            shutil.copy(audio_path, output_path)
         
         return output_path if os.path.exists(output_path) else audio_path
 

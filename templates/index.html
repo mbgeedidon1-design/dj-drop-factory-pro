@@ -393,6 +393,16 @@
         .effect-chip-icon { font-size: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
         .effect-chip-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
         .effect-chip.active .effect-chip-label { color: var(--accent); }
+        .preset-pill {
+            display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px;
+            background: rgba(255,255,255,0.07); border: 1px solid var(--border); color: var(--text-secondary);
+            font-size: 12px; font-weight: 600; margin: 6px 6px 0 0;
+        }
+        .preset-pill.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+        .studio-hint {
+            padding: 12px 16px; border-radius: 14px; background: var(--bg-input); border: 1px solid var(--border);
+            font-size: 13px; color: var(--text-secondary); margin: 12px 20px 0;
+        }
 
         /* Buttons */
         .btn-primary {
@@ -787,10 +797,8 @@
 
             <div class="feature-band">
                 <div class="feature-item"><strong>AI Scripts</strong>Fast, ready-to-use copy</div>
-                <div class="feature-item"><strong>Pro Controls</strong>Voice, mood, and FX tuning</div>
-                <div class="feature-item"><strong>Studio Library</strong>Save and reuse your best drops</div>
-            </div>
-
+                <div class="feature-item"><strong>Studio FX</strong>Voice effects and presets</div>
+                <div class="feature-item"><strong>Creator Toolkit</strong>Growth, software, and promo ideas</div>
             <!-- Mode Selector -->
             <div class="segmented-control" role="tablist">
                 <button class="segment active" onclick="setMode('ai', this)">AI Drop</button>
@@ -1115,8 +1123,23 @@
                     <div class="effect-chip" data-effect="fast" onclick="selectEffect(this)" role="button" tabindex="0">
                         <span class="effect-chip-icon">⚡</span><span class="effect-chip-label">Fast</span>
                     </div>
+                    <div class="effect-chip" data-effect="vintage" onclick="selectEffect(this)" role="button" tabindex="0">
+                        <span class="effect-chip-icon">🕰️</span><span class="effect-chip-label">Vintage</span>
+                    </div>
+                    <div class="effect-chip" data-effect="bass_boost" onclick="selectEffect(this)" role="button" tabindex="0">
+                        <span class="effect-chip-icon">🔊</span><span class="effect-chip-label">Bass</span>
+                    </div>
+                    <div class="effect-chip" data-effect="wide" onclick="selectEffect(this)" role="button" tabindex="0">
+                        <span class="effect-chip-icon">🌌</span><span class="effect-chip-label">Wide</span>
+                    </div>
+                    <div class="effect-chip" data-effect="club" onclick="selectEffect(this)" role="button" tabindex="0">
+                        <span class="effect-chip-icon">🎉</span><span class="effect-chip-label">Club</span>
+                    </div>
                 </div>
 
+                <div class="section-header">🎛️ Studio Presets</div>
+                <div id="studioPresets" style="padding: 0 20px 12px;"></div>
+                <div id="studioHint" class="studio-hint">Choose a preset to guide your voice texture and mix energy.</div>
                 <button class="btn-secondary" id="applyEffectBtn" onclick="applyVoiceEffect()" disabled>✨ Apply Effect</button>
                 <div class="audio-wrap" id="processedPlayback" style="display: none;">
                     <audio id="processedAudio" controls></audio>
@@ -1819,6 +1842,59 @@
             document.querySelectorAll('.effect-chip').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
             selectedEffect = el.dataset.effect;
+            const hint = document.getElementById('studioHint');
+            if (hint) {
+                const labels = {
+                    none: 'Clean and natural voice with no extra coloration.',
+                    helium: 'Bright and playful for fun intros and social content.',
+                    low: 'Deep and dramatic for darker brand tones.',
+                    robot: 'Synthetic and futuristic for tech-forward drops.',
+                    echo: 'Large and immersive for crowd-heavy announcements.',
+                    phone: 'Vintage broadcast texture for classic radio vibes.',
+                    slow: 'More deliberate pacing for elegant intros and storytelling.',
+                    fast: 'High-energy for hype drops and pushy promos.',
+                    vintage: 'Old-school warmth with layered texture.',
+                    bass_boost: 'Heavy low-end energy for club-ready voiceovers.',
+                    wide: 'Open, cinematic sound for festival and premium sets.',
+                    club: 'Punchy and polished for modern DJ drops.'
+                };
+                hint.textContent = labels[selectedEffect] || 'Choose a preset to guide your voice texture and mix energy.';
+            }
+        }
+
+        async function loadStudioPresets() {
+            try {
+                const res = await fetch('/api/studio-presets');
+                const data = await res.json();
+                if (!data.success) return;
+                window.__studioPresets = data.presets;
+                const container = document.getElementById('studioPresets');
+                if (!container) return;
+                container.innerHTML = Object.entries(data.presets).map(([key, preset]) => `
+                    <button class="preset-pill" data-preset="${key}" onclick="applyPreset('${key}', this)">
+                        <span>${preset.label}</span>
+                    </button>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function applyPreset(key, el) {
+            document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active'));
+            if (el) el.classList.add('active');
+            const preset = window.__studioPresets && window.__studioPresets[key] ? window.__studioPresets[key] : null;
+            if (preset) {
+                const chips = document.querySelectorAll('.effect-chip');
+                chips.forEach(chip => {
+                    if (chip.dataset.effect === preset.effect) chip.classList.add('active');
+                    else chip.classList.remove('active');
+                });
+                selectedEffect = preset.effect;
+                const hint = document.getElementById('studioHint');
+                if (hint) hint.textContent = `${preset.label}: ${preset.description}`;
+                showToast(`🎛️ ${preset.label} preset selected`);
+            }
         }
 
         // ==================== APPLY VOICE EFFECT ====================
@@ -1847,6 +1923,11 @@
         }
 
         function useAsBackground() { showToast('🎵 Voice effect set as background track'); }
+
+        // ==================== INITIALIZE FEATURE PANELS ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStudioPresets();
+        });
 
         // ==================== STRING TOOLS ====================
         async function applyStringTool(operation) {

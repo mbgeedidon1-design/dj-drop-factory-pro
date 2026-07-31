@@ -1,3 +1,4 @@
+import io
 import sys
 from pathlib import Path
 
@@ -80,3 +81,33 @@ def test_auth_register_and_login_flow():
     assert me_response.status_code == 200
     me_data = me_response.get_json()
     assert me_data["user"]["email"] == email
+
+
+def test_process_voice_endpoint_applies_effect_and_returns_metadata():
+    client = app.app.test_client()
+    response = client.post(
+        "/api/process_voice",
+        data={
+            "audio": (io.BytesIO(b"fake audio data"), "voice.wav"),
+            "effect": "robot",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert data["effect"] == "robot"
+    assert data["processing"]["applied"] is True
+    assert data["processing"]["source"] == "upload"
+    assert data["audio_url"].startswith("/static/generated/uploads/")
+
+
+def test_studio_presets_endpoint_returns_creative_options():
+    client = app.app.test_client()
+    response = client.get("/api/studio-presets")
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert "club_banger" in data["presets"]
+    assert data["presets"]["club_banger"]["effect"] == "club"

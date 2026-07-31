@@ -126,6 +126,8 @@ def status():
             "Premium audio processing",
             "Library management",
             "Creator studio tools",
+            "Studio presets and effects",
+            "Voice recording workflow",
             "Account-based workflow",
         ],
         "generated_count": stats.get("total_drops", 0),
@@ -213,6 +215,49 @@ def suggest_names():
     return jsonify({"success": True, "suggestions": suggestions})
 
 
+@app.get("/api/studio-presets")
+def studio_presets():
+    presets = {
+        "club_banger": {
+            "label": "Club Banger",
+            "effect": "club",
+            "description": "Punchy, bright, and high-energy for event drops.",
+            "accent": "#ff6b35",
+        },
+        "amapiano": {
+            "label": "Amapiano",
+            "effect": "wide",
+            "description": "Smooth and spacious for modern African club sets.",
+            "accent": "#00d084",
+        },
+        "dancehall": {
+            "label": "Dancehall",
+            "effect": "bass_boost",
+            "description": "Heavy bass and swagger for high-impact drops.",
+            "accent": "#9b59b6",
+        },
+        "radio": {
+            "label": "Radio",
+            "effect": "clean",
+            "description": "Balanced and polished for broadcast and promos.",
+            "accent": "#3498db",
+        },
+        "afrobeat": {
+            "label": "Afrobeat",
+            "effect": "cinematic",
+            "description": "Warm, rich, and cinematic for curated mixes.",
+            "accent": "#f7c531",
+        },
+        "trap": {
+            "label": "Trap",
+            "effect": "reverb",
+            "description": "Dark, dramatic, and immersive for modern trap edits.",
+            "accent": "#ff4757",
+        },
+    }
+    return jsonify({"success": True, "presets": presets})
+
+
 @app.post("/api/process_voice")
 def process_voice():
     audio_file = request.files.get("audio")
@@ -224,10 +269,17 @@ def process_voice():
     target_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     audio_file.save(target_path)
 
+    processed_path = audio_processor.apply_voice_effect(target_path, effect)
+    relative_path = os.path.relpath(processed_path, os.path.join(app.root_path, "static"))
     return jsonify({
         "success": True,
         "effect": effect,
-        "audio_url": f"/static/generated/uploads/{filename}",
+        "audio_url": f"/{relative_path.replace(os.sep, '/')}",
+        "processing": {
+            "applied": os.path.exists(processed_path),
+            "source": "upload",
+            "effect": effect,
+        },
     })
 
 
