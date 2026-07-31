@@ -343,6 +343,22 @@ def login_user():
     return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"]}, "token": _issue_token(user["id"])})
 
 
+@app.post("/api/auth/google")
+def google_auth():
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "Google User").strip()
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return jsonify({"success": False, "error": "Email is required"}), 400
+
+    user = db.get_user_by_email(email)
+    if not user:
+        user = db.create_user({"name": name or "Google User", "email": email, "password": str(uuid.uuid4())})
+
+    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"]}, "token": _issue_token(user["id"])})
+
+
 @app.get("/api/auth/me")
 def current_user():
     user = get_authenticated_user()

@@ -126,6 +126,32 @@ def test_web_search_endpoint_returns_google_style_results():
     assert "google.com/search" in data["results"][0]["google_url"]
 
 
+def test_google_auth_endpoint_creates_or_returns_user():
+    client = app.app.test_client()
+    email = f"google_user_{uuid.uuid4().hex[:8]}@gmail.com"
+
+    response = client.post(
+        "/api/auth/google",
+        json={"name": "Google User", "email": email},
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert data["user"]["email"] == email
+    assert data["token"]
+
+
+def test_homepage_template_restores_signed_in_state_on_load():
+    client = app.app.test_client()
+    response = client.get("/")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "renderAuth();" in html
+    assert "DOMContentLoaded" in html
+
+
 def test_homepage_template_has_stable_mobile_ui_structure():
     client = app.app.test_client()
     response = client.get("/")

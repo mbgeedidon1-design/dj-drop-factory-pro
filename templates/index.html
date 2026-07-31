@@ -1285,6 +1285,7 @@
                         </div>
                         <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="registerAccount()">Create account</button>
                         <button class="btn-secondary" style="margin:0; width:100%;" onclick="loginAccount()">Sign in</button>
+                        <button class="btn-secondary" style="margin:10px 0 0 0; width:100%;" onclick="continueWithGoogle()">Continue with Google</button>
                     </div>
                     <div id="authSignedIn" style="display:none;">
                         <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
@@ -2540,6 +2541,51 @@
             }
         }
 
+        async function continueWithGoogle() {
+            try {
+                const provider = window.google?.accounts?.id;
+                if (!provider) {
+                    showToast('⚠️ Google sign-in is unavailable right now');
+                    return;
+                }
+
+                provider.prompt((response) => {
+                    if (!response?.credential) {
+                        showToast('⚠️ Google sign-in was cancelled');
+                        return;
+                    }
+
+                    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+                    const name = payload.name || payload.given_name || 'Google User';
+                    const email = payload.email;
+                    if (!email) {
+                        showToast('⚠️ Google account email is missing');
+                        return;
+                    }
+
+                    fetch('/api/auth/google', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            localStorage.setItem('dj_drop_auth_token', data.token);
+                            localStorage.setItem('dj_drop_user', JSON.stringify(data.user));
+                            renderAuth();
+                            showToast('✅ Signed in with Google');
+                        } else {
+                            showToast('❌ ' + (data.error || 'Google sign-in failed'));
+                        }
+                    })
+                    .catch(() => showToast('❌ Google sign-in failed'));
+                });
+            } catch (err) {
+                showToast('❌ Google sign-in failed');
+            }
+        }
+
         async function loadCreatorToolkit() {
             const goal = document.getElementById('toolkitGoal').value;
             const genre = document.getElementById('toolkitGenre').value;
@@ -2586,6 +2632,7 @@
         checkStatus();
         fetchTrendingGenres();
         fetchNameSuggestions();
+        renderAuth();
         </script>
 </body>
 </html>
