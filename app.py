@@ -1,4 +1,4 @@
-@@
+
 -        return jsonify({
 -            "success": True,
 -            "script": script,
@@ -29,4 +29,4 @@
 +                "fx_mode": fx_mode
 +            }
 +        })
-@@
+
