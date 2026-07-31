@@ -4,6 +4,8 @@ import os
 import re
 import time
 import uuid
+from urllib.parse import quote
+
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -429,6 +431,9 @@ def web_search():
     if not query:
         return jsonify({"success": True, "results": []})
 
+    encoded_query = quote(query)
+    google_url = f"https://www.google.com/search?q={encoded_query}"
+
     results = []
     for category, items in DISCOVER_DATA.items():
         for item in items:
@@ -438,10 +443,20 @@ def web_search():
                     "title": item.get("name") or item.get("title") or "Discover item",
                     "snippet": f"Relevant {category.replace('_', ' ')} resource for {query}",
                     "source": category.replace("_", " ").title(),
-                    "url": "#",
+                    "url": google_url,
+                    "google_url": google_url,
                 })
         if len(results) >= 5:
             break
+
+    if not results:
+        results.append({
+            "title": f"Search the web for {query}",
+            "snippet": "Open Google to find more results about this topic.",
+            "source": "Google",
+            "url": google_url,
+            "google_url": google_url,
+        })
 
     return jsonify({"success": True, "results": results})
 

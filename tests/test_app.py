@@ -114,6 +114,18 @@ def test_studio_presets_endpoint_returns_creative_options():
     assert data["presets"]["club_banger"]["effect"] == "club"
 
 
+def test_web_search_endpoint_returns_google_style_results():
+    client = app.app.test_client()
+    response = client.get("/api/web_search", query_string={"q": "dj software"})
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert data["results"]
+    assert "google_url" in data["results"][0]
+    assert "google.com/search" in data["results"][0]["google_url"]
+
+
 def test_homepage_template_has_stable_mobile_ui_structure():
     client = app.app.test_client()
     response = client.get("/")

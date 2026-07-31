@@ -1248,6 +1248,7 @@
                 <span class="search-icon">🔍</span>
                 <input type="text" id="discoverSearch" placeholder="Search DJs, apps, festivals, or the web..." oninput="debounceSearch(this.value)">
             </div>
+            <div style="padding: 0 20px 8px; font-size: 12px; color: var(--text-muted);">Browse built-in Discover content first, then tap a web result to open Google for broader searches.</div>
 
             <!-- Internal Results -->
             <div class="data-list" id="discoverList"></div>
@@ -2375,7 +2376,7 @@
             let html = '<div class="section-header" style="margin-top:16px;">🌐 Web Results</div>';
             results.forEach(item => {
                 html += `
-                    <div class="data-item" onclick="window.open('${escapeHtml(item.url)}', '_blank')" style="cursor:pointer;">
+                    <div class="data-item" onclick="window.open('${escapeHtml(item.url)}', '_blank', 'noopener,noreferrer')" style="cursor:pointer;">
                         <div class="data-item-title">${escapeHtml(item.title)}</div>
                         <div class="data-item-meta">${escapeHtml(item.snippet).substring(0, 150)}…</div>
                         <div class="data-item-tag">🔗 ${escapeHtml(item.source)}</div>
