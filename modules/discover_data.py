@@ -73,10 +73,18 @@ DISCOVER_DATA = {
 
 def search_discover(query):
     """Search across all discover categories"""
-    query = query.lower()
+    query = (query or "").strip().lower()
     results = {}
 
+    if not query:
+        return DISCOVER_DATA
+
     for category, items in DISCOVER_DATA.items():
+        category_label = category.replace("_", " ").lower()
+        if query in category_label:
+            results[category] = items
+            continue
+
         matches = []
         for item in items:
             item_text = " ".join(str(v) for v in item.values()).lower()

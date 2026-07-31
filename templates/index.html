@@ -1206,27 +1206,27 @@
             </div>
 
             <div class="discover-grid">
-                <div class="discover-card" onclick="showDiscoverList('dj-groups')">
+                <div class="discover-card" onclick="triggerDiscoverSearch('dj-groups', 'dj groups')">
                     <div class="discover-card-icon">🎧</div>
                     <div class="discover-card-title">DJ Groups</div>
                     <div class="discover-card-desc">Top collectives & crews</div>
                 </div>
-                <div class="discover-card" onclick="showDiscoverList('streaming-apps')">
+                <div class="discover-card" onclick="triggerDiscoverSearch('streaming-apps', 'streaming apps')">
                     <div class="discover-card-icon">🎵</div>
                     <div class="discover-card-title">Streaming</div>
                     <div class="discover-card-desc">Music apps & platforms</div>
                 </div>
-                <div class="discover-card" onclick="showDiscoverList('dj-software')">
+                <div class="discover-card" onclick="triggerDiscoverSearch('dj-software', 'dj software')">
                     <div class="discover-card-icon">🎛️</div>
                     <div class="discover-card-title">DJ Software</div>
                     <div class="discover-card-desc">Production & mixing tools</div>
                 </div>
-                <div class="discover-card" onclick="showDiscoverList('festivals')">
+                <div class="discover-card" onclick="triggerDiscoverSearch('festivals', 'festivals')">
                     <div class="discover-card-icon">🎪</div>
                     <div class="discover-card-title">Festivals</div>
                     <div class="discover-card-desc">Events & lineups 2026</div>
                 </div>
-                <div class="discover-card" onclick="showDiscoverList('theater-streaming')">
+                <div class="discover-card" onclick="triggerDiscoverSearch('theater-streaming', 'theater streaming')">
                     <div class="discover-card-icon">🎭</div>
                     <div class="discover-card-title">Theater</div>
                     <div class="discover-card-desc">Live performance streams</div>
@@ -1236,7 +1236,7 @@
                     <div class="discover-card-title">Music Networks</div>
                     <div class="discover-card-desc">Fresh music discovery and communities</div>
                 </div>
-                <div class="discover-card" onclick="showDiscoverList('all')">
+                <div class="discover-card" onclick="triggerDiscoverSearch('all', 'discover dj music')">
                     <div class="discover-card-icon">🌐</div>
                     <div class="discover-card-title">All Data</div>
                     <div class="discover-card-desc">Everything at once</div>
@@ -2327,6 +2327,33 @@
             }
         }
 
+        function buildGoogleSearchUrl(query) {
+            const url = new URL('https://www.google.com/search');
+            url.searchParams.set('q', query);
+            return url.toString();
+        }
+
+        function triggerDiscoverSearch(type, query) {
+            const searchBox = document.getElementById('discoverSearch');
+            if (searchBox) {
+                searchBox.value = query;
+            }
+            if (type === 'all') {
+                showDiscoverList('all');
+            } else {
+                showDiscoverList(type);
+            }
+            debounceSearch(query);
+        }
+
+        function openDiscoverSearch(query, label) {
+            const resolvedQuery = (query || label || 'dj music').trim();
+            const searchBox = document.getElementById('discoverSearch');
+            if (searchBox) searchBox.value = resolvedQuery;
+            debounceSearch(resolvedQuery);
+            window.open(buildGoogleSearchUrl(resolvedQuery), '_blank', 'noopener,noreferrer');
+        }
+
         function renderDiscoverItems(items, type) {
             const list = document.getElementById('discoverList');
             if (items.length === 0) {
@@ -2360,8 +2387,9 @@
                     if (item.region) meta.push(item.region);
                 }
                 
+                const searchTerm = `${title} ${meta.join(' ')} ${tags.join(' ')}`.trim();
                 return `
-                    <div class="data-item">
+                    <div class="data-item" onclick="openDiscoverSearch('${escapeHtml(searchTerm).replace(/'/g, "\\'")}', '${escapeHtml(title).replace(/'/g, "\\'")}')" role="button" tabindex="0">
                         <div class="data-item-title">${escapeHtml(title)}</div>
                         <div class="data-item-meta">${escapeHtml(meta.join(' • '))}</div>
                         ${tags.map(t => `<span class="data-item-tag">${escapeHtml(t)}</span>`).join('')}
@@ -2376,7 +2404,7 @@
             let html = '<div class="section-header" style="margin-top:16px;">🌐 Web Results</div>';
             results.forEach(item => {
                 html += `
-                    <div class="data-item" onclick="window.open('${escapeHtml(item.url)}', '_blank', 'noopener,noreferrer')" style="cursor:pointer;">
+                    <div class="data-item" onclick="window.open('${escapeHtml(item.url)}', '_blank', 'noopener,noreferrer')" style="cursor:pointer;" role="button" tabindex="0">
                         <div class="data-item-title">${escapeHtml(item.title)}</div>
                         <div class="data-item-meta">${escapeHtml(item.snippet).substring(0, 150)}…</div>
                         <div class="data-item-tag">🔗 ${escapeHtml(item.source)}</div>

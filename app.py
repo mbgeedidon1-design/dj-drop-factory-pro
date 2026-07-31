@@ -436,13 +436,27 @@ def web_search():
 
     results = []
     for category, items in DISCOVER_DATA.items():
+        category_label = category.replace("_", " ")
+        if query.lower() in category_label.lower():
+            for item in items[:3]:
+                results.append({
+                    "title": item.get("name") or item.get("title") or "Discover item",
+                    "snippet": f"Relevant {category_label} resource for {query}",
+                    "source": category_label.title(),
+                    "url": google_url,
+                    "google_url": google_url,
+                })
+            if len(results) >= 5:
+                break
+            continue
+
         for item in items:
             item_text = " ".join(str(value) for value in item.values())
             if query.lower() in item_text.lower():
                 results.append({
                     "title": item.get("name") or item.get("title") or "Discover item",
-                    "snippet": f"Relevant {category.replace('_', ' ')} resource for {query}",
-                    "source": category.replace("_", " ").title(),
+                    "snippet": f"Relevant {category_label} resource for {query}",
+                    "source": category_label.title(),
                     "url": google_url,
                     "google_url": google_url,
                 })
