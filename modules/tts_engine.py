@@ -1,7 +1,13 @@
 import os
 import subprocess
+import tempfile
 
 from config import Config
+
+try:
+    from gtts import gTTS
+except Exception:  # pragma: no cover - optional dependency
+    gTTS = None
 
 
 class TTSManager:
@@ -10,6 +16,7 @@ class TTSManager:
         os.makedirs(self.output_dir, exist_ok=True)
         self.ffmpeg_available = self._check_ffmpeg()
         self.espeak_cmd = self._find_espeak_cmd()
+        self.provider = self._select_provider()
 
     def _check_ffmpeg(self):
         try:
@@ -27,6 +34,63 @@ class TTSManager:
                 continue
         return None
 
+    def _select_provider(self):
+        if gTTS is not None:
+            return "gTTS"
+        if self.espeak_cmd:
+            return "espeak"
+        return "placeholder"
+
+    def _normalize_voice(self, voice):
+        voice_name = voice or "auto"
+        if voice_name == "auto":
+            return "en"
+        if str(voice_name).startswith("en"):
+            return str(voice_name)
+        if str(voice_name) in {"1", "2", "3", "4", "5", "6", "7"}:
+            return "en"
+        return "en"
+
+    def _transcode_audio(self, input_path, output_path):
+        if not self.ffmpeg_available:
+            os.replace(input_path, output_path)
+            return
+
+        subprocess.run(
+            [
+                "ffmpeg", "-y", "-i", input_path,
+                "-vn", "-ar", str(Config.AUDIO_SAMPLE_RATE),
+                "-ac", str(Config.AUDIO_CHANNELS),
+                "-b:a", Config.AUDIO_BITRATE,
+                output_path,
+            ],
+            capture_output=True,
+            check=False,
+        )
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            os.remove(input_path)
+        else:
+            os.replace(input_path, output_path)
+
+    def _generate_gtts(self, text, output_path, voice_name):
+        if gTTS is None:
+            raise RuntimeError("gTTS unavailable")
+
+        lang = "en" if voice_name == "en" else voice_name.split("-")[0]
+        if language := lang.split("_")[0].split("-")[0]:
+            lang = language
+
+        temp_fd, temp_path = tempfile.mkstemp(suffix=".mp3")
+        os.close(temp_fd)
+        try:
+            tts = gTTS(text=text, lang=lang, slow=False, lang_check=False)
+            tts.save(temp_path)
+            self._transcode_audio(temp_path, output_path)
+            return True
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
     def generate(self, text, output_path, voice=None, rate=175, pitch=0, volume=200):
         if not text:
             raise ValueError("Text input is required")
@@ -39,11 +103,24 @@ class TTSManager:
         with open(txt_path, "w", encoding="utf-8") as handle:
             handle.write(text)
 
-        voice_name = voice or "en"
-        if voice_name == "auto":
-            voice_name = "en"
-
+        voice_name = self._normalize_voice(voice)
         amplitude = max(0, min(200, int(volume)))
+
+        if self.provider == "gTTS":
+            try:
+                if self._generate_gtts(text, output_path, voice_name):
+                    return {
+                        "filename": output_filename,
+                        "path": output_path,
+                        "voice": voice_name,
+                        "engine": "gTTS",
+                        "rate": rate,
+                        "pitch": pitch,
+                        "volume": amplitude,
+                    }
+            except Exception:
+                pass
+
         if self.espeak_cmd:
             result = subprocess.run(
                 [self.espeak_cmd, "-v", voice_name, "-s", str(rate), "-p", str(pitch), "-a", str(amplitude), "-f", txt_path, "-w", wav_path],
@@ -76,7 +153,7 @@ class TTSManager:
             "filename": output_filename,
             "path": output_path,
             "voice": voice_name,
-            "engine": "espeak-ng" if self.espeak_cmd else "placeholder",
+            "engine": self.provider if self.provider != "placeholder" else "placeholder",
             "rate": rate,
             "pitch": pitch,
             "volume": amplitude,

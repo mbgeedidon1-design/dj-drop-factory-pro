@@ -1,6 +1,6 @@
-# DJ Drop Factory Pro v5.0 - Production Backend
+# DJ Drop Factory Pro - Studio-Ready Audio Platform
 
-Complete PWA-ready backend with Edge TTS, FFmpeg audio processing, and SQLite library management.
+A polished, commercial-ready DJ drop generator built for creators, radio hosts, club promoters, and event brands. The app combines AI script generation, voice controls, audio processing, and a saved library in a modern web experience.
 
 ## Quick Start
 

@@ -4,3 +4,4 @@ Pillow==10.4.0
 python-dotenv==1.0.1
 gunicorn==23.0.0
 requests==2.32.3
+gTTS==2.5.4

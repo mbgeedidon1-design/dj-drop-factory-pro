@@ -22,3 +22,29 @@ def test_build_generation_response_handles_missing_tts_metadata():
     assert response["processing"]["pitch"] is None
     assert response["processing"]["volume"] is None
     assert response["processing"]["fx_mode"] == "dry"
+
+
+def test_status_endpoint_returns_commercial_metadata():
+    client = app.app.test_client()
+    response = client.get("/api/status")
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["status"] == "ok"
+    assert data["app"] == "DJ Drop Factory Pro"
+    assert data["online"] is True
+    assert data["tts_provider"] in {"gTTS", "edge-tts", "espeak", "placeholder"}
+    assert "AI voice generation" in data["features"]
+
+
+def test_string_tools_endpoint_formats_text():
+    client = app.app.test_client()
+    response = client.post(
+        "/api/string_tools",
+        json={"text": "hello world", "operation": "capitalize"},
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert data["result"] == "Hello World"

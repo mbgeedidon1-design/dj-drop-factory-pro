@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="author" content="Macdonald Barasa">
-    <title>DJ Drop Factory Pro v5.0 — Live</title>
+    <title>DJ Drop Factory Pro | Studio-Ready AI DJ Drops</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/static/icon-192.png">
     <style>
@@ -166,6 +166,26 @@
             0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 208, 132, 0.7); }
             50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(0, 208, 132, 0); }
         }
+
+        /* Feature Band */
+        .feature-band {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 0 0 18px;
+        }
+        .feature-item {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            backdrop-filter: blur(12px);
+        }
+        .feature-item strong { display: block; margin-bottom: 3px; font-size: 12px; }
 
         /* Section Cards */
         .section-card {
@@ -756,13 +776,19 @@
 
             <!-- Hero Card -->
             <div class="hero-card">
-                <div class="hero-title">🔥 DJ Drop Factory v5.0</div>
-                <div class="hero-text">AI POWERED DJ DROP GENERATOR</div>
+                <div class="hero-title">🎧 Studio-Ready AI DJ Drops</div>
+                <div class="hero-text">Create polished, professional drops for radio, clubs, events, and branded content in minutes.</div>
                 <div class="hero-badge">
                     <span class="hero-dot"></span>
                     <span id="statusText">Checking status…</span>
                     <span class="web-indicator" id="webIndicator">🌐 Live</span>
                 </div>
+            </div>
+
+            <div class="feature-band">
+                <div class="feature-item"><strong>AI Scripts</strong>Fast, ready-to-use copy</div>
+                <div class="feature-item"><strong>Pro Controls</strong>Voice, mood, and FX tuning</div>
+                <div class="feature-item"><strong>Studio Library</strong>Save and reuse your best drops</div>
             </div>
 
             <!-- Mode Selector -->
@@ -1269,9 +1295,9 @@
             </div>
 
             <div class="credits">
-                <strong>Premium AI DJ Drop Factory v5.0 — Free Edition</strong><br>
-                Created by Macdonald Barasa<br>
-                AI Training | Loud Audio | Voice Effects | Library | Web Data | String Wizard | Live Sync
+                <strong>DJ Drop Factory Pro — Studio Edition</strong><br>
+                Built for professional DJs, creators, and branded events<br>
+                AI Scripts | Voice Controls | Studio FX | Library | Discover Insights
             </div>
         </div>
 
@@ -1290,7 +1316,7 @@
                 <div style="padding: 0 20px 20px; text-align: center;">
                     <div style="font-size: 48px; margin-bottom: 12px;">👋</div>
                     <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Need help or have feedback?</div>
-                    <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">We are here to assist you with anything DJ Drop Factory related.</div>
+                    <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">Our team is here to support your studio workflow and help you ship better drops faster.</div>
                     <a href="mailto:simiyumacdonal1@gmail.com" style="text-decoration: none;">
                         <button class="btn-primary" style="margin: 0 0 10px 0;">📧 Email Us</button>
                     </a>
@@ -1309,7 +1335,7 @@
                             <span class="faq-chevron" style="color: var(--accent); font-size: 18px; transition: transform 0.2s;">▼</span>
                         </div>
                         <div class="faq-answer" style="display: none; margin-top: 10px; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
-                            AI Drop mode uses artificial intelligence to generate a custom DJ drop script based on your DJ name, genre, mood, and energy level. Just fill out the wizard and hit Generate!
+                            AI Drop mode uses intelligent script generation to create polished drops based on your DJ identity, genre, mood, and energy. It is designed for club sets, radio promos, and event branding.
                         </div>
                     </div>
 
@@ -1349,7 +1375,7 @@
                             <span class="faq-chevron" style="color: var(--accent); font-size: 18px; transition: transform 0.2s;">▼</span>
                         </div>
                         <div class="faq-answer" style="display: none; margin-top: 10px; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
-                            The app generates high-quality MP3 audio (up to 320kbps when High Quality is enabled in Settings). Voice recordings are captured in WebM format and can be processed with real-time effects.
+                            The app generates broadcast-ready MP3 audio with professional-quality controls. Voice recordings can be refined with effects for branded mixes and polished presentations.
                         </div>
                     </div>
 
@@ -1369,7 +1395,7 @@
                             <span class="faq-chevron" style="color: var(--accent); font-size: 18px; transition: transform 0.2s;">▼</span>
                         </div>
                         <div class="faq-answer" style="display: none; margin-top: 10px; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
-                            Yes! DJ Drop Factory Pro v5.0 is a free edition. All core features including AI generation, voice recording, effects, and library storage are available at no cost.
+                            Yes. DJ Drop Factory Pro gives you a premium creative workspace with AI generation, voice controls, effects, and a library for organizing your best drops.
                         </div>
                     </div>
                 </div>
