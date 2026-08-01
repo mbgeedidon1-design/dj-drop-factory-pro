@@ -1163,10 +1163,10 @@
                     <div style="padding: 0 20px 10px;" id="resultImageContainer">
                         <img id="resultImage" style="width:100%;border-radius:12px;margin-bottom:10px;" src="">
                     </div>
-                    <button class="btn-secondary" onclick="saveToLibrary()">💾 Save to Library</button>
-                    <button class="btn-secondary" onclick="copyScript()">📋 Copy Script</button>
-                </div>
-            </div>
+                    <button class="btn-secondary" style="margin:10px 0 0 0; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('whatsapp')">💬 WhatsApp</button>
+                    <button class="btn-secondary" style="margin:10px 0 0 10px; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('twitter')">𝕏 Tweet</button>
+                    <button class="btn-secondary" style="margin:10px 0 0 0; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('instagram')">📸 Instagram</button>
+                    <button class="btn-secondary" style="margin:10px 0 0 10px; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('tiktok')">🎵 TikTok</button>
 
             <div class="credits">
                 Created by <strong>Macdonald Barasa</strong><br>
@@ -1321,13 +1321,38 @@
                             <option value="radio">Radio</option>
                         </select>
                     </div>
-                    <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="loadCreatorToolkit()">Get recommendations</button>
+                    <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPresets')">📌 Saved Presets</button>
+                    <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenAnalytics')">📊 My Analytics</button>
+                    <button class="btn-secondary" style="margin:0; width:100%;" onclick="showScreen('screenPromptHistory')">⏱️ Prompt History</button>
+
                     <div id="creatorToolkitResults" style="display:none; padding-top:8px;"></div>
                 </div>
             </div>
 
             <div class="section-card">
                 <div class="section-header">⚙️ Preferences</div>
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-title">Dark Mode</div>
+                        <div class="toggle-desc">Easier on the eyes at night</div>
+                    </div>
+                    <div class="toggle-switch on" onclick="toggleTheme(this)" role="switch" aria-checked="true" id="themeToggle">
+                        <div class="toggle-knob"></div>
+                    </div>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-title">Language</div>
+                        <div class="toggle-desc" id="langDisplay">English</div>
+                    </div>
+                    <select class="form-select" style="margin: 0; width: 120px; padding: 8px; height: auto;" onchange="changeLanguage(this.value)" id="languageSelect">
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="pt">Português</option>
+                        <option value="sw">Swahili</option>
+                    </select>
+                </div>
                 <div class="toggle-row">
                     <div class="toggle-info">
                         <div class="toggle-title">Auto-Stutter</div>
@@ -1358,6 +1383,28 @@
             </div>
 
             <div class="section-card">
+                <div class="section-header">👑 Premium Features</div>
+                <div style="padding: 16px 20px;">
+                    <div style="background: linear-gradient(135deg, var(--accent), var(--purple)); border-radius: 16px; padding: 20px; margin-bottom: 12px; text-align: center;">
+                        <div style="font-size: 28px; margin-bottom: 8px;">✨</div>
+                        <div style="font-size: 16px; font-weight: 700; color: white; margin-bottom: 6px;">Unlock Premium</div>
+                        <div style="font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.5; margin-bottom: 12px;">Unlimited drops, advanced FX, cloud backup, and more.</div>
+                        <button class="btn-primary" style="margin: 0; width: 100%;" onclick="upgradePremium()">Get Premium</button>
+                    </div>
+                    <div id="premiumStatus" style="display: none; text-align: center; padding: 12px; background: var(--accent-soft); border-radius: 12px; color: var(--accent); font-weight: 600;">✅ You have Premium!</div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">🎨 My Studio</div>
+                <div style="padding: 16px 20px;">
+                    <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPresets')">📋 Saved Presets</button>
+                    <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="loadAnalytics()">📊 My Analytics</button>
+                    <button class="btn-secondary" style="margin:0; width:100%;" onclick="showScreen('screenPromptHistory')">⏱️ Prompt History</button>
+                </div>
+            </div>
+
+            <div class="section-card">
                 <div class="section-header">🎚️ Audio</div>
                 <div class="toggle-row" style="cursor: pointer;" onclick="showToast('FX presets updated')">
                     <div class="toggle-info"><div class="toggle-title">FX Presets</div><div class="toggle-desc">Customize default effects</div></div>
@@ -1370,7 +1417,18 @@
             </div>
 
             <div class="section-card">
-                <div class="section-header">ℹ️ About</div>
+                <div class="section-header">👑 Premium Features</div>
+                <div style="padding: 16px 20px;">
+                    <div style="background: linear-gradient(135deg, var(--accent), var(--purple)); border-radius: 16px; padding: 20px; margin-bottom: 12px; text-align: center;">
+                        <div style="font-size: 28px; margin-bottom: 8px;">✨</div>
+                        <div style="font-size: 16px; font-weight: 700; color: white; margin-bottom: 6px;">Unlock Premium</div>
+                        <div style="font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.5; margin-bottom: 12px;">Unlimited drops, advanced FX, cloud backup, and more.</div>
+                        <button class="btn-primary" style="margin: 0; width: 100%;" onclick="upgradePremium()">Get Premium</button>
+                    </div>
+                    <div id="premiumStatus" style="display: none; text-align: center; padding: 12px; background: var(--accent-soft); border-radius: 12px; color: var(--accent); font-weight: 600;">✅ You have Premium!</div>
+                </div>
+            </div>
+
                 <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Version</div></div><span style="color: var(--accent); font-weight: 700; font-size: 15px;">5.0 Live</span></div>
                 <div class="toggle-row" style="cursor: pointer;" onclick="showToast('Thanks for rating! ⭐⭐⭐⭐⭐')">
                     <div class="toggle-info"><div class="toggle-title">Rate DJ Drop Factory</div></div>
@@ -1386,7 +1444,76 @@
         </div>
 
 
-        <!-- ==================== HELP SCREEN ==================== -->
+        <!-- ==================== PRESETS SCREEN ==================== -->
+        <div class="screen" id="screenPresets">
+            <div class="nav-header">
+                <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
+                <div><div class="nav-title">Presets</div></div>
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div id="presetsEmpty" class="empty-state">
+                <div class="empty-icon">📌</div>
+                <div class="empty-title">No Presets Yet</div>
+                <div class="empty-subtitle">Save your favorite settings as presets for quick access.</div>
+            </div>
+
+            <div id="presetsList" style="padding: 0 20px 100px;"></div>
+        </div>
+
+        <!-- ==================== ANALYTICS SCREEN ==================== -->
+        <div class="screen" id="screenAnalytics">
+            <div class="nav-header">
+                <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
+                <div><div class="nav-title">Analytics</div></div>
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">📊 Your Stats</div>
+                <div style="padding: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                        <div style="background: var(--bg-input); border-radius: 14px; padding: 16px; text-align: center;">
+                            <div style="font-size: 32px; font-weight: 800; color: var(--accent);" id="totalDropsCount">0</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Drops Generated</div>
+                        </div>
+                        <div style="background: var(--bg-input); border-radius: 14px; padding: 16px; text-align: center;">
+                            <div style="font-size: 32px; font-weight: 800; color: var(--accent2);" id="totalSharesCount">0</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Times Shared</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">🎵 Genre Breakdown</div>
+                <div id="genreChart" style="padding: 20px;"></div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">🔥 Favorites</div>
+                <div style="padding: 0 20px 20px;">
+                    <div id="favoriteGenre" style="background: var(--bg-input); border-radius: 14px; padding: 14px; font-size: 15px; font-weight: 600; color: var(--text);">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== PROMPT HISTORY SCREEN ==================== -->
+        <div class="screen" id="screenPromptHistory">
+            <div class="nav-header">
+                <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
+                <div><div class="nav-title">Prompt History</div></div>
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div id="historyEmpty" class="empty-state">
+                <div class="empty-icon">⏱️</div>
+                <div class="empty-title">No History Yet</div>
+                <div class="empty-subtitle">Your generated drops will be saved here for quick reuse.</div>
+            </div>
+
+            <div id="historyList" style="padding: 0 20px 100px;"></div>
+        </div>
         <div class="screen" id="screenHelp">
             <div class="nav-header">
                 <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
@@ -1509,6 +1636,77 @@
                 Created by Macdonald Barasa<br>
                 <a href="mailto:simiyumacdonal1@gmail.com">simiyumacdonal1@gmail.com</a>
             </div>
+        </div>
+
+        <!-- ==================== PRESETS SCREEN ==================== -->
+        <div class="screen" id="screenPresets">
+            <div class="nav-header">
+                <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
+                <div><div class="nav-title">Presets</div></div>
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div id="presetsEmpty" class="empty-state">
+                <div class="empty-icon">📌</div>
+                <div class="empty-title">No Presets Yet</div>
+                <div class="empty-subtitle">Save your favorite settings as presets for quick access.</div>
+            </div>
+
+            <div id="presetsList" style="padding: 0 20px 100px;"></div>
+        </div>
+
+        <!-- ==================== ANALYTICS SCREEN ==================== -->
+        <div class="screen" id="screenAnalytics">
+            <div class="nav-header">
+                <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
+                <div><div class="nav-title">Analytics</div></div>
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">📊 Your Stats</div>
+                <div style="padding: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                        <div style="background: var(--bg-input); border-radius: 14px; padding: 16px; text-align: center;">
+                            <div style="font-size: 32px; font-weight: 800; color: var(--accent);" id="totalDropsCount">0</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Drops Generated</div>
+                        </div>
+                        <div style="background: var(--bg-input); border-radius: 14px; padding: 16px; text-align: center;">
+                            <div style="font-size: 32px; font-weight: 800; color: var(--accent2);" id="totalSharesCount">0</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Times Shared</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">🎵 Genre Breakdown</div>
+                <div id="genreChart" style="padding: 20px;"></div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">🔥 Favorites</div>
+                <div style="padding: 0 20px 20px;">
+                    <div id="favoriteGenre" style="background: var(--bg-input); border-radius: 14px; padding: 14px; font-size: 15px; font-weight: 600; color: var(--text);">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== PROMPT HISTORY SCREEN ==================== -->
+        <div class="screen" id="screenPromptHistory">
+            <div class="nav-header">
+                <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
+                <div><div class="nav-title">Prompt History</div></div>
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div id="historyEmpty" class="empty-state">
+                <div class="empty-icon">⏱️</div>
+                <div class="empty-title">No History Yet</div>
+                <div class="empty-subtitle">Your generated drops will be saved here for quick reuse.</div>
+            </div>
+
+            <div id="historyList" style="padding: 0 20px 100px;"></div>
         </div>
 
         <!-- Player Bar -->
@@ -2619,6 +2817,253 @@
             }
         }
 
+        function reusePrompt(el) {
+            try {
+                const promptData = JSON.parse(el.getAttribute('data-prompt') || '{}');
+                if (promptData.dj_name) {
+                    document.getElementById('djName').value = promptData.dj_name;
+                    document.getElementById('djCity').value = promptData.city || '';
+                    document.getElementById('genre').value = promptData.genre || document.getElementById('strictGenre').value;
+                    document.getElementById('mood').value = promptData.mood || 'classic';
+                    document.getElementById('energy').value = promptData.energy || 8;
+                    document.getElementById('fxMode').value = promptData.fx_mode || 'standard';
+                    showScreen('screenGenerate');
+                    showToast('✏️ Prompt loaded!');
+                }
+            } catch (e) {
+                showToast('Error loading prompt');
+            }
+        }
+
+        // ==================== THEME & LANGUAGE ====================
+        function toggleTheme(btn) {
+            const isDark = btn.classList.contains('on');
+            const newTheme = isDark ? 'dark' : 'light';
+            document.documentElement.style.filter = isDark ? 'none' : 'invert(0.9)';
+            localStorage.setItem('df_theme', newTheme);
+            const user = JSON.parse(localStorage.getItem('dj_drop_user') || 'null');
+            if (user && localStorage.getItem('dj_drop_auth_token')) {
+                fetch('/api/user/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('dj_drop_auth_token') },
+                    body: JSON.stringify({ theme: newTheme })
+                }).catch(() => {});
+            }
+        }
+
+        function changeLanguage(lang) {
+            localStorage.setItem('df_language', lang);
+            const labels = { en: 'English', es: 'Español', fr: 'Français', pt: 'Português', sw: 'Swahili' };
+            document.getElementById('langDisplay').textContent = labels[lang] || 'English';
+            showToast(`🌍 Language changed to ${labels[lang]}`);
+            const user = JSON.parse(localStorage.getItem('dj_drop_user') || 'null');
+            if (user && localStorage.getItem('dj_drop_auth_token')) {
+                fetch('/api/user/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('dj_drop_auth_token') },
+                    body: JSON.stringify({ language: lang })
+                }).catch(() => {});
+            }
+        }
+
+        // ==================== PRESETS ====================
+        async function saveCurrentPreset() {
+            const token = localStorage.getItem('dj_drop_auth_token');
+            if (!token) {
+                showToast('⚠️ Sign in to save presets');
+                return;
+            }
+            const presetName = prompt('Preset name:', `${document.getElementById('genre')?.value || 'club_banger'} Preset`);
+            if (!presetName) return;
+            const presetData = {
+                name: presetName,
+                genre: document.getElementById('genre')?.value || document.getElementById('strictGenre')?.value,
+                voice: document.getElementById('voice')?.value || document.getElementById('strictVoice')?.value,
+                mood: document.getElementById('mood')?.value,
+                energy: parseInt(document.getElementById('energy')?.value || document.getElementById('strictEnergy')?.value || 8),
+                fx_mode: document.getElementById('fxMode')?.value || document.getElementById('strictFxMode')?.value,
+                vocal_gain: parseFloat(document.getElementById('vocalGain')?.value || document.getElementById('strictVocalGain')?.value || 1.8),
+                bg_gain: parseFloat(document.getElementById('bgGain')?.value || document.getElementById('strictBgGain')?.value || 0.25)
+            };
+            try {
+                const res = await fetch('/api/presets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(presetData)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`⭐ Preset saved!`);
+                    loadPresets();
+                } else {
+                    showToast('❌ Failed to save preset');
+                }
+            } catch (err) {
+                showToast('❌ Error saving preset');
+            }
+        }
+
+        async function loadPresets() {
+            const token = localStorage.getItem('dj_drop_auth_token');
+            if (!token) return;
+            try {
+                const res = await fetch('/api/presets', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                if (data.success && data.presets.length > 0) {
+                    document.getElementById('presetsEmpty').style.display = 'none';
+                    document.getElementById('presetsList').innerHTML = data.presets.map(p => `
+                        <div class="library-item" style="margin-bottom: 10px;">
+                            <div class="library-art">⭐</div>
+                            <div class="library-info">
+                                <div class="library-title">${escapeHtml(p.name)}</div>
+                                <div class="library-meta">${escapeHtml(p.genre || 'Custom')} • ${escapeHtml(p.voice || 'Default')}</div>
+                            </div>
+                            <button class="delete-btn" onclick="deletePreset(${p.id})">🗑️</button>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('presetsEmpty').style.display = 'block';
+                    document.getElementById('presetsList').innerHTML = '';
+                }
+            } catch (err) {
+                console.log('Error loading presets');
+            }
+        }
+
+        async function deletePreset(presetId) {
+            const token = localStorage.getItem('dj_drop_auth_token');
+            if (!token) return;
+            try {
+                await fetch(`/api/presets/${presetId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                loadPresets();
+                showToast('🗑️ Preset deleted');
+            } catch (err) {
+                showToast('❌ Error deleting preset');
+            }
+        }
+
+        // ==================== ANALYTICS ====================
+        async function loadAnalytics() {
+            showScreen('screenAnalytics');
+            const token = localStorage.getItem('dj_drop_auth_token');
+            if (!token) {
+                showToast('⚠️ Sign in to view analytics');
+                return;
+            }
+            try {
+                const res = await fetch('/api/analytics', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const a = data.analytics;
+                    document.getElementById('totalDropsCount').textContent = a.total_drops || 0;
+                    document.getElementById('totalSharesCount').textContent = a.total_shares || 0;
+                    document.getElementById('favoriteGenre').textContent = a.favorite_genre ? `⭐ ${a.favorite_genre}` : 'Keep generating to see trends';
+                    const genreHtml = Object.entries(a.genre_breakdown || {}).map(([g, c]) => `
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span>${escapeHtml(g)}</span><strong style="color: var(--accent);">${c} drops</strong>
+                        </div>
+                    `).join('');
+                    document.getElementById('genreChart').innerHTML = genreHtml || '<div style="color: var(--text-muted);">No data yet</div>';
+                }
+            } catch (err) {
+                console.log('Error loading analytics');
+            }
+        }
+
+        // ==================== PROMPT HISTORY ====================
+        async function loadPromptHistory() {
+            const token = localStorage.getItem('dj_drop_auth_token');
+            if (!token) return;
+            try {
+                const res = await fetch('/api/prompt-history', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                if (data.success && data.history.length > 0) {
+                    document.getElementById('historyEmpty').style.display = 'none';
+                    document.getElementById('historyList').innerHTML = data.history.map(h => `
+                        <div class="library-item" style="margin-bottom: 10px;">
+                            <div class="library-art">✏️</div>
+                            <div class="library-info">
+                                <div class="library-title">${escapeHtml(h.dj_name || 'Unknown')}</div>
+                                <div class="library-meta">${escapeHtml(h.genre || 'Unknown')} • ${new Date(h.created_at).toLocaleDateString()}</div>
+                            </div>
+                            <div class="library-play" onclick="reusePrompt(this)" data-prompt='${JSON.stringify(h).replace(/'/g, "&apos;")}' style="cursor: pointer;">↻</div>
+                        </div>
+                    `).join('');
+
+                } else {
+                    document.getElementById('historyEmpty').style.display = 'block';
+                    document.getElementById('historyList').innerHTML = '';
+                }
+            } catch (err) {
+                console.log('Error loading prompt history');
+            }
+        }
+
+        // ==================== SHARING ====================
+        function shareToSocial(platform) {
+            if (!lastGeneratedDrop) {
+                showToast('⚠️ Generate a drop first');
+                return;
+            }
+            const script = document.getElementById('resultScript')?.textContent || 'Check out my new DJ drop!';
+            const title = 'DJ Drop Factory Pro';
+            let url = '';
+            const token = localStorage.getItem('dj_drop_auth_token');
+            if (token) {
+                fetch('/api/share', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ platform, drop_id: lastGeneratedDrop.project })
+                }).catch(() => {});
+            }
+            if (platform === 'whatsapp') {
+                url = `https://wa.me/?text=${encodeURIComponent(script)}`;
+            } else if (platform === 'twitter') {
+                url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(script)}`;
+            } else if (platform === 'instagram') {
+                showToast('📱 Copy the drop link and share on Instagram!');
+                return;
+            } else if (platform === 'tiktok') {
+                showToast('🎵 Download your drop and upload to TikTok!');
+                return;
+            }
+            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        // ==================== PREMIUM ====================
+        async function upgradePremium() {
+            const token = localStorage.getItem('dj_drop_auth_token');
+            if (!token) {
+                showToast('⚠️ Sign in first to upgrade');
+                return;
+            }
+            try {
+                const res = await fetch('/api/premium/upgrade', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('dj_drop_user', JSON.stringify({ ...JSON.parse(localStorage.getItem('dj_drop_user')), is_premium: 1 }));
+                    document.getElementById('premiumStatus').style.display = 'block';
+                    showToast('🎉 Welcome to Premium!');
+                } else {
+                    showToast('❌ Upgrade failed');
+                }
+            } catch (err) {
+                showToast('❌ Error upgrading');
+            }
+        }
+
         // ==================== PWA ====================
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/service-worker.js').catch(() => {});
@@ -2633,6 +3078,12 @@
         fetchTrendingGenres();
         fetchNameSuggestions();
         renderAuth();
+        loadPresets();
+        loadPromptHistory();
+        const user = JSON.parse(localStorage.getItem('dj_drop_user') || 'null');
+        if (user && user.is_premium) {
+            document.getElementById('premiumStatus').style.display = 'block';
+        }
         </script>
 </body>
 </html>

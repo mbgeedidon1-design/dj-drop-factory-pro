@@ -364,7 +364,133 @@ def current_user():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"]}})
+    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"], "theme": user.get("theme", "dark"), "language": user.get("language", "en"), "is_premium": user.get("is_premium", 0)}})
+
+
+@app.post("/api/user/profile")
+def update_user_profile():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    data = request.get_json(silent=True) or {}
+    profile_data = {
+        "name": data.get("name", user["name"]),
+        "bio": data.get("bio", ""),
+        "avatar_url": data.get("avatar_url", ""),
+        "theme": data.get("theme", "dark"),
+        "language": data.get("language", "en")
+    }
+    
+    db.update_user_profile(user["id"], profile_data)
+    return jsonify({"success": True, "user": profile_data})
+
+
+@app.post("/api/presets")
+def save_preset():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    data = request.get_json(silent=True) or {}
+    preset_id = db.save_preset(user["id"], data)
+    return jsonify({"success": True, "preset_id": preset_id})
+
+
+@app.get("/api/presets")
+def get_presets():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    presets = db.get_presets(user["id"])
+    return jsonify({"success": True, "presets": presets})
+
+
+@app.delete("/api/presets/<preset_id>")
+def delete_preset(preset_id):
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    deleted = db.delete_preset(int(preset_id), user["id"])
+    return jsonify({"success": deleted})
+
+
+@app.post("/api/prompt-history")
+def save_prompt_history():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    data = request.get_json(silent=True) or {}
+    db.add_prompt_history(user["id"], data)
+    return jsonify({"success": True})
+
+
+@app.get("/api/prompt-history")
+def get_prompt_history():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    history = db.get_prompt_history(user["id"])
+    return jsonify({"success": True, "history": history})
+
+
+@app.get("/api/analytics")
+def get_analytics():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    analytics = db.get_or_create_analytics(user["id"])
+    drops = db.get_drops(user_id=user["id"])
+    total_drops = len(drops)
+    
+    genres = {}
+    for drop in drops:
+        genre = drop.get("genre", "Unknown")
+        genres[genre] = genres.get(genre, 0) + 1
+    
+    favorite_genre = max(genres, key=genres.get) if genres else None
+    
+    return jsonify({
+        "success": True,
+        "analytics": {
+            "total_drops": total_drops,
+            "favorite_genre": favorite_genre,
+            "genre_breakdown": genres,
+            "total_shares": analytics.get("total_shares", 0)
+        }
+    })
+
+
+@app.post("/api/share")
+def track_share():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    data = request.get_json(silent=True) or {}
+    platform = data.get("platform", "unknown")
+    drop_id = data.get("drop_id")
+    
+    # Log share action and update analytics
+    db.log_stat(user["id"], f"share_{platform}")
+    db.update_analytics(user["id"], {"total_shares": db.get_or_create_analytics(user["id"])["total_shares"] + 1})
+    
+    return jsonify({"success": True})
+
+
+@app.post("/api/premium/upgrade")
+def upgrade_premium():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    db.set_premium(user["id"], True)
+    return jsonify({"success": True, "message": "Welcome to Premium!"})
 
 
 @app.get("/api/creator-toolkit")
@@ -423,7 +549,10 @@ def get_library():
 
 @app.post("/api/library")
 def save_library():
+    user = get_authenticated_user()
     data = request.get_json(silent=True) or {}
+    user_id = user["id"] if user else None
+    data["user_id"] = user_id
     saved = db.add_drop(data)
     return jsonify({"success": saved})
 
