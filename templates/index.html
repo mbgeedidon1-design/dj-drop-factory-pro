@@ -1196,6 +1196,13 @@
                 <button class="nav-btn" onclick="showScreen('screenSettings')" aria-label="Settings">⚙️</button>
             </div>
 
+            <div class="section-card">
+                <div class="section-header">🎛️ Studio Vault</div>
+                <div style="padding: 16px 20px; color: var(--text-secondary); line-height: 1.6;">
+                    Organize your best drops, playlists, and promotional assets in one polished workspace.
+                </div>
+            </div>
+
             <div id="libraryEmpty" class="empty-state">
                 <div class="empty-icon">🎵</div>
                 <div class="empty-title">No Drops Yet</div>
@@ -1213,7 +1220,7 @@
                     <div class="nav-title">Discover</div>
                     <div class="nav-subtitle">DJ world at your fingertips</div>
                 </div>
-                <div style="width:40px;"></div>
+                <button class="nav-btn" onclick="showScreen('screenSettings')" aria-label="Settings">⚙️</button>
             </div>
 
             <div class="discover-grid">
@@ -1334,7 +1341,8 @@
                     </div>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPresets')">📌 Saved Presets</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenAnalytics')">📊 My Analytics</button>
-                    <button class="btn-secondary" style="margin:0; width:100%;" onclick="showScreen('screenPromptHistory')">⏱️ Prompt History</button>
+                    <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPromptHistory')">⏱️ Prompt History</button>
+                    <button class="btn-secondary" style="margin:0; width:100%;" onclick="loadApiKeyManager()">🔐 API Keys</button>
 
                     <div id="creatorToolkitResults" style="display:none; padding-top:8px;"></div>
                 </div>
@@ -1440,6 +1448,17 @@
                 </div>
             </div>
 
+            <div class="section-card">
+                <div class="section-header">🔐 API Key Studio</div>
+                <div id="apiKeyPanel" style="padding: 16px 20px; display: none;">
+                    <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px;">Issue secure API keys for your app, clients, or commercial integrations. Share them safely and rotate them anytime.</div>
+                    <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="createApiKey()">Create API Key</button>
+                    <div id="apiKeyList" style="display:grid; gap:10px;"></div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">ℹ️ More</div>
                 <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Version</div></div><span style="color: var(--accent); font-weight: 700; font-size: 15px;">5.0 Live</span></div>
                 <div class="toggle-row" style="cursor: pointer;" onclick="showToast('Thanks for rating! ⭐⭐⭐⭐⭐')">
                     <div class="toggle-info"><div class="toggle-title">Rate DJ Drop Factory</div></div>
@@ -1715,8 +1734,13 @@
 
         // ==================== NAVIGATION ====================
         function showScreen(screenId) {
+            const target = document.getElementById(screenId);
+            if (!target) {
+                console.warn('Requested screen not found:', screenId);
+                return;
+            }
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
+            target.classList.add('active');
             document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
             if (screenId === 'screenHome') document.querySelectorAll('.tab-item')[0].classList.add('active');
             if (screenId === 'screenLibrary') document.querySelectorAll('.tab-item')[1].classList.add('active');
@@ -1724,9 +1748,20 @@
             currentScreen = screenId;
             if (screenId === 'screenLibrary') renderLibrary();
             if (screenId === 'screenDiscover') loadDiscoverAll();
+            if (screenId === 'screenSettings') {
+                renderAuth();
+                loadPresets();
+                loadPromptHistory();
+            }
         }
 
-        function goBack() { showScreen('screenHome'); }
+        function goBack() {
+            if (currentScreen === 'screenSettings' || currentScreen === 'screenPresets' || currentScreen === 'screenAnalytics' || currentScreen === 'screenPromptHistory' || currentScreen === 'screenHelp') {
+                showScreen('screenHome');
+                return;
+            }
+            showScreen('screenHome');
+        }
 
         // ==================== FAQ TOGGLE ====================
         function toggleFaq(item) {
@@ -2754,6 +2789,65 @@
                 }
             } catch (err) {
                 panel.innerHTML = '<div style="color:var(--error);">Recommendations unavailable right now.</div>';
+            }
+        }
+
+        async function loadApiKeyManager() {
+            const token = localStorage.getItem('dj_drop_auth_token');
+            const panel = document.getElementById('apiKeyPanel');
+            const list = document.getElementById('apiKeyList');
+            if (!token) {
+                showToast('⚠️ Sign in to manage API keys');
+                return;
+            }
+            panel.style.display = 'block';
+            list.innerHTML = '<div style="color:var(--text-muted);">Loading API keys…</div>';
+            try {
+                const res = await fetch('/api/keys', { headers: { Authorization: 'Bearer ' + token } });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Unable to load keys');
+                if (!data.keys || data.keys.length === 0) {
+                    list.innerHTML = '<div style="color:var(--text-muted);">No API keys yet. Create one for your client or app.</div>';
+                    return;
+                }
+                list.innerHTML = data.keys.map(key => `
+                    <div style="border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--bg-input);">
+                        <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(key.name || 'Studio App')}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(key.key_prefix || '')}••••••</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                list.innerHTML = '<div style="color:var(--error);">Unable to load API keys right now.</div>';
+            }
+        }
+
+        async function createApiKey() {
+            const token = localStorage.getItem('dj_drop_auth_token');
+            const panel = document.getElementById('apiKeyPanel');
+            const list = document.getElementById('apiKeyList');
+            if (!token) {
+                showToast('⚠️ Sign in to create API keys');
+                return;
+            }
+            try {
+                const res = await fetch('/api/keys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                    body: JSON.stringify({ name: `Studio Key ${new Date().toLocaleDateString()}` })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Unable to create key');
+                panel.style.display = 'block';
+                list.innerHTML = `
+                    <div style="border:1px solid var(--accent); border-radius:12px; padding:12px; background:var(--accent-soft);">
+                        <div style="font-weight:700; margin-bottom:4px;">New API key created</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">Copy this key once and store it securely.</div>
+                        <div style="font-family: monospace; word-break: break-all; color:var(--accent);">${escapeHtml(data.key)}</div>
+                    </div>
+                `;
+                showToast('🔐 API key created');
+            } catch (err) {
+                showToast('❌ Unable to create API key');
             }
         }
 

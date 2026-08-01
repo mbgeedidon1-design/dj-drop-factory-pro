@@ -1,6 +1,8 @@
 """DJ Drop Factory Pro v5.0 - SQLite Database Module"""
-import sqlite3
+import hashlib
 import os
+import secrets
+import sqlite3
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 from config import Config
@@ -110,6 +112,20 @@ class Database:
                 total_shares INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS api_keys (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                key_prefix TEXT NOT NULL,
+                key_hash TEXT NOT NULL UNIQUE,
+                is_active INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_used_at TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         """)
@@ -288,6 +304,53 @@ class Database:
         conn.commit()
         conn.close()
         return True
+
+    def create_api_key(self, user_id, name):
+        api_key = f"df_live_{secrets.token_urlsafe(24)}"
+        key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+        prefix = api_key[:12]
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO api_keys (user_id, name, key_prefix, key_hash) VALUES (?, ?, ?, ?)",
+                (user_id, name or "Studio App", prefix, key_hash),
+            )
+            conn.commit()
+            return {"id": cursor.lastrowid, "key": api_key, "prefix": prefix, "name": name or "Studio App"}
+        finally:
+            conn.close()
+
+    def get_api_keys(self, user_id):
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM api_keys WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC", (user_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    def delete_api_key(self, key_id, user_id):
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE api_keys SET is_active = 0 WHERE id = ? AND user_id = ?", (key_id, user_id))
+        conn.commit()
+        deleted = cursor.rowcount > 0
+        conn.close()
+        return deleted
+
+    def get_api_key_user(self, api_key):
+        if not api_key:
+            return None
+        key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, id, name FROM api_keys WHERE key_hash = ? AND is_active = 1", (key_hash,))
+        row = cursor.fetchone()
+        if row:
+            cursor.execute("UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?", (row["id"],))
+            conn.commit()
+        conn.close()
+        return dict(row) if row else None
 
     def add_drop(self, drop_data):
         conn = self._get_conn()

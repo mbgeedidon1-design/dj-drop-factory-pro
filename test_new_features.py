@@ -2,6 +2,7 @@
 """Test new Phase 1 features: presets, analytics, sharing, premium, etc."""
 import json
 import sys
+import uuid
 sys.path.insert(0, '/workspaces/dj-drop-factory-pro')
 
 from app import app
@@ -13,7 +14,7 @@ def test_features():
     
     # Create test user
     reg_response = client.post('/api/auth/register', 
-        json={'name': 'Test User', 'email': 'test@feature.com', 'password': 'pass123'})
+        json={'name': 'Test User', 'email': f'test_{uuid.uuid4().hex[:8]}@feature.com', 'password': 'pass123'})
     assert reg_response.status_code == 200
     reg_data = reg_response.get_json()
     token = reg_data['token']
@@ -103,6 +104,24 @@ def test_features():
     google_data = google_response.get_json()
     assert google_data['success']
     print("✅ Google sign-in works")
+
+    # Test API key lifecycle
+    api_keys_response = client.get('/api/keys', headers={'Authorization': f'Bearer {token}'})
+    assert api_keys_response.status_code == 200
+
+    create_key_response = client.post('/api/keys', headers={'Authorization': f'Bearer {token}'}, json={'name': 'Studio App'})
+    assert create_key_response.status_code == 200
+    created_key_data = create_key_response.get_json()
+    assert created_key_data['success']
+    assert created_key_data['key']
+
+    validate_key_response = client.post('/api/keys/validate', json={'api_key': created_key_data['key']})
+    assert validate_key_response.status_code == 200
+    validate_key_data = validate_key_response.get_json()
+    assert validate_key_data['success']
+    assert validate_key_data['valid'] is True
+
+    print("✅ API key lifecycle verified")
     
     print("\n🎉 All Phase 1 features verified!")
 

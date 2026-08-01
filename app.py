@@ -131,6 +131,8 @@ def status():
             "Studio presets and effects",
             "Voice recording workflow",
             "Account-based workflow",
+            "Commercial API key management",
+            "Professional creator analytics",
         ],
         "generated_count": stats.get("total_drops", 0),
     })
@@ -491,6 +493,41 @@ def upgrade_premium():
     
     db.set_premium(user["id"], True)
     return jsonify({"success": True, "message": "Welcome to Premium!"})
+
+
+@app.get("/api/keys")
+def list_api_keys():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    keys = db.get_api_keys(user["id"])
+    return jsonify({"success": True, "keys": keys})
+
+
+@app.post("/api/keys")
+def create_api_key():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    result = db.create_api_key(user["id"], data.get("name") or "Studio App")
+    return jsonify({"success": True, **result})
+
+
+@app.post("/api/keys/validate")
+def validate_api_key():
+    data = request.get_json(silent=True) or {}
+    api_key = (data.get("api_key") or "").strip()
+    if not api_key:
+        return jsonify({"success": False, "error": "API key is required"}), 400
+
+    record = db.get_api_key_user(api_key)
+    if not record:
+        return jsonify({"success": False, "valid": False, "error": "Invalid API key"}), 401
+
+    return jsonify({"success": True, "valid": True, "user_id": record["user_id"], "name": record["name"]})
 
 
 @app.get("/api/creator-toolkit")
