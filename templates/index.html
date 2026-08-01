@@ -34,6 +34,17 @@
             --purple: #9b59b6;
             --blue: #3498db;
         }
+        :root.theme-light {
+            --bg: #f3f5fb;
+            --bg-elevated: #ffffff;
+            --bg-card: #ffffff;
+            --bg-hover: #eef2ff;
+            --bg-input: #f8fafc;
+            --text: #111827;
+            --text-secondary: #4b5563;
+            --text-muted: #7a8497;
+            --border: #e5e7eb;
+        }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html { scroll-behavior: smooth; }
@@ -1638,77 +1649,6 @@
             </div>
         </div>
 
-        <!-- ==================== PRESETS SCREEN ==================== -->
-        <div class="screen" id="screenPresets">
-            <div class="nav-header">
-                <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
-                <div><div class="nav-title">Presets</div></div>
-                <div style="width: 40px;"></div>
-            </div>
-
-            <div id="presetsEmpty" class="empty-state">
-                <div class="empty-icon">📌</div>
-                <div class="empty-title">No Presets Yet</div>
-                <div class="empty-subtitle">Save your favorite settings as presets for quick access.</div>
-            </div>
-
-            <div id="presetsList" style="padding: 0 20px 100px;"></div>
-        </div>
-
-        <!-- ==================== ANALYTICS SCREEN ==================== -->
-        <div class="screen" id="screenAnalytics">
-            <div class="nav-header">
-                <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
-                <div><div class="nav-title">Analytics</div></div>
-                <div style="width: 40px;"></div>
-            </div>
-
-            <div class="section-card">
-                <div class="section-header">📊 Your Stats</div>
-                <div style="padding: 20px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                        <div style="background: var(--bg-input); border-radius: 14px; padding: 16px; text-align: center;">
-                            <div style="font-size: 32px; font-weight: 800; color: var(--accent);" id="totalDropsCount">0</div>
-                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Drops Generated</div>
-                        </div>
-                        <div style="background: var(--bg-input); border-radius: 14px; padding: 16px; text-align: center;">
-                            <div style="font-size: 32px; font-weight: 800; color: var(--accent2);" id="totalSharesCount">0</div>
-                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Times Shared</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section-card">
-                <div class="section-header">🎵 Genre Breakdown</div>
-                <div id="genreChart" style="padding: 20px;"></div>
-            </div>
-
-            <div class="section-card">
-                <div class="section-header">🔥 Favorites</div>
-                <div style="padding: 0 20px 20px;">
-                    <div id="favoriteGenre" style="background: var(--bg-input); border-radius: 14px; padding: 14px; font-size: 15px; font-weight: 600; color: var(--text);">Loading...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== PROMPT HISTORY SCREEN ==================== -->
-        <div class="screen" id="screenPromptHistory">
-            <div class="nav-header">
-                <button class="nav-btn" onclick="goBack()" aria-label="Back">←</button>
-                <div><div class="nav-title">Prompt History</div></div>
-                <div style="width: 40px;"></div>
-            </div>
-
-            <div id="historyEmpty" class="empty-state">
-                <div class="empty-icon">⏱️</div>
-                <div class="empty-title">No History Yet</div>
-                <div class="empty-subtitle">Your generated drops will be saved here for quick reuse.</div>
-            </div>
-
-            <div id="historyList" style="padding: 0 20px 100px;"></div>
-        </div>
-
         <!-- Player Bar -->
         <div class="player-bar" id="playerBar">
             <div class="player-art">🎵</div>
@@ -2836,10 +2776,26 @@
         }
 
         // ==================== THEME & LANGUAGE ====================
+        function applyThemePreference() {
+            const savedTheme = localStorage.getItem('df_theme') || 'dark';
+            const isDark = savedTheme !== 'light';
+            document.documentElement.classList.toggle('theme-light', !isDark);
+            document.documentElement.classList.toggle('theme-dark', isDark);
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                themeToggle.classList.toggle('on', isDark);
+                themeToggle.setAttribute('aria-checked', isDark ? 'true' : 'false');
+            }
+        }
+
         function toggleTheme(btn) {
             const isDark = btn.classList.contains('on');
-            const newTheme = isDark ? 'dark' : 'light';
-            document.documentElement.style.filter = isDark ? 'none' : 'invert(0.9)';
+            const nextDark = !isDark;
+            const newTheme = nextDark ? 'dark' : 'light';
+            document.documentElement.classList.toggle('theme-light', !nextDark);
+            document.documentElement.classList.toggle('theme-dark', nextDark);
+            btn.classList.toggle('on', nextDark);
+            btn.setAttribute('aria-checked', nextDark ? 'true' : 'false');
             localStorage.setItem('df_theme', newTheme);
             const user = JSON.parse(localStorage.getItem('dj_drop_user') || 'null');
             if (user && localStorage.getItem('dj_drop_auth_token')) {
@@ -3074,6 +3030,7 @@
         });
 
         // ==================== INIT ====================
+        applyThemePreference();
         checkStatus();
         fetchTrendingGenres();
         fetchNameSuggestions();
@@ -3081,8 +3038,9 @@
         loadPresets();
         loadPromptHistory();
         const user = JSON.parse(localStorage.getItem('dj_drop_user') || 'null');
-        if (user && user.is_premium) {
-            document.getElementById('premiumStatus').style.display = 'block';
+        const premiumStatus = document.getElementById('premiumStatus');
+        if (premiumStatus && user && user.is_premium) {
+            premiumStatus.style.display = 'block';
         }
         </script>
 </body>
