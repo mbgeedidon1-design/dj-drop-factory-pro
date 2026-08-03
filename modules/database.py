@@ -7,6 +7,7 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash
 from config import Config
 
+
 class Database:
     def __init__(self):
         self.db_path = Config.DATABASE_PATH
@@ -133,6 +134,9 @@ class Database:
         conn.commit()
         conn.close()
 
+    # ------------------------------------------------------------------
+    # Users
+    # ------------------------------------------------------------------
     def create_user(self, user_data):
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -185,6 +189,17 @@ class Database:
         finally:
             conn.close()
 
+    def set_premium(self, user_id, is_premium):
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET is_premium = ? WHERE id = ?", (1 if is_premium else 0, user_id))
+        conn.commit()
+        conn.close()
+        return True
+
+    # ------------------------------------------------------------------
+    # Presets
+    # ------------------------------------------------------------------
     def save_preset(self, user_id, preset_data):
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -226,6 +241,9 @@ class Database:
         conn.close()
         return deleted
 
+    # ------------------------------------------------------------------
+    # Prompt History
+    # ------------------------------------------------------------------
     def add_prompt_history(self, user_id, prompt_data):
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -262,6 +280,9 @@ class Database:
         conn.close()
         return [dict(row) for row in rows]
 
+    # ------------------------------------------------------------------
+    # Analytics
+    # ------------------------------------------------------------------
     def get_or_create_analytics(self, user_id):
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -297,14 +318,9 @@ class Database:
         finally:
             conn.close()
 
-    def set_premium(self, user_id, is_premium):
-        conn = self._get_conn()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE users SET is_premium = ? WHERE id = ?", (1 if is_premium else 0, user_id))
-        conn.commit()
-        conn.close()
-        return True
-
+    # ------------------------------------------------------------------
+    # API Keys
+    # ------------------------------------------------------------------
     def create_api_key(self, user_id, name):
         api_key = f"df_live_{secrets.token_urlsafe(24)}"
         key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
@@ -324,15 +340,37 @@ class Database:
     def get_api_keys(self, user_id):
         conn = self._get_conn()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM api_keys WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC", (user_id,))
+        cursor.execute(
+            "SELECT * FROM api_keys WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC",
+            (user_id,)
+        )
         rows = cursor.fetchall()
         conn.close()
         return [dict(row) for row in rows]
 
-    def delete_api_key(self, key_id, user_id):
+    def update_api_key(self, key_id, user_id, data):
+        """Rename an API key. Returns True if row existed and belonged to user."""
         conn = self._get_conn()
         cursor = conn.cursor()
-        cursor.execute("UPDATE api_keys SET is_active = 0 WHERE id = ? AND user_id = ?", (key_id, user_id))
+        try:
+            cursor.execute("""
+                UPDATE api_keys 
+                SET name = ? 
+                WHERE id = ? AND user_id = ? AND is_active = 1
+            """, (data.get("name", "Studio App"), key_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+    def delete_api_key(self, key_id, user_id):
+        """Soft-delete (revoke) an API key."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE api_keys SET is_active = 0 WHERE id = ? AND user_id = ?",
+            (key_id, user_id)
+        )
         conn.commit()
         deleted = cursor.rowcount > 0
         conn.close()
@@ -344,14 +382,34 @@ class Database:
         key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
         conn = self._get_conn()
         cursor = conn.cursor()
-        cursor.execute("SELECT user_id, id, name FROM api_keys WHERE key_hash = ? AND is_active = 1", (key_hash,))
+        cursor.execute(
+            "SELECT user_id, id, name FROM api_keys WHERE key_hash = ? AND is_active = 1",
+            (key_hash,)
+        )
         row = cursor.fetchone()
         if row:
-            cursor.execute("UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?", (row["id"],))
+            cursor.execute(
+                "UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (row["id"],)
+            )
             conn.commit()
         conn.close()
         return dict(row) if row else None
 
+    def count_active_api_keys(self, user_id):
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) as c FROM api_keys WHERE user_id = ? AND is_active = 1",
+            (user_id,)
+        )
+        row = cursor.fetchone()
+        conn.close()
+        return row["c"] if row else 0
+
+    # ------------------------------------------------------------------
+    # Library (Drops)
+    # ------------------------------------------------------------------
     def add_drop(self, drop_data):
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -393,7 +451,10 @@ class Database:
                 LIMIT ? OFFSET ?
             """, (user_id, limit, offset))
         else:
-            cursor.execute("SELECT * FROM library ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset))
+            cursor.execute(
+                "SELECT * FROM library ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                (limit, offset)
+            )
         rows = cursor.fetchall()
         conn.close()
         return [dict(row) for row in rows]
@@ -415,11 +476,16 @@ class Database:
         conn.close()
         return deleted
 
+    # ------------------------------------------------------------------
+    # Stats
+    # ------------------------------------------------------------------
     def log_stat(self, device_id, action, genre=None, drop_type=None):
         conn = self._get_conn()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO stats (device_id, action, genre, drop_type) VALUES (?, ?, ?, ?)",
-                      (device_id, action, genre, drop_type))
+        cursor.execute(
+            "INSERT INTO stats (device_id, action, genre, drop_type) VALUES (?, ?, ?, ?)",
+            (device_id, action, genre, drop_type)
+        )
         conn.commit()
         conn.close()
 
@@ -432,5 +498,6 @@ class Database:
         genre_stats = [dict(row) for row in cursor.fetchall()]
         conn.close()
         return {"total_drops": total_drops, "genre_breakdown": genre_stats}
+
 
 db = Database()
