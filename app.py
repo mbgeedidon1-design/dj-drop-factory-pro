@@ -26,10 +26,18 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 tts_engine = TTSManager()
 
 
+# =====================================================================
+# Helpers
+# =====================================================================
+
 def _issue_token(user_id):
     timestamp = int(time.time())
     payload = f"{user_id}:{timestamp}"
-    signature = hmac.new(app.config["SECRET_KEY"].encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    signature = hmac.new(
+        app.config["SECRET_KEY"].encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
     return f"{payload}:{signature}"
 
 
@@ -41,7 +49,11 @@ def _decode_token(token):
         return None
     user_id, timestamp, signature = parts
     payload = f"{user_id}:{timestamp}"
-    expected = hmac.new(app.config["SECRET_KEY"].encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    expected = hmac.new(
+        app.config["SECRET_KEY"].encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
     if not hmac.compare_digest(signature, expected):
         return None
     if abs(int(time.time()) - int(timestamp)) > 7 * 24 * 60 * 60:
@@ -85,6 +97,17 @@ def build_generation_response(script, final_path, cover_filename, drop_id, tts_r
     }
 
 
+def _mask_key(prefix: str) -> str:
+    """Show only the prefix with a visual indicator that the rest is hidden."""
+    if not prefix:
+        return "****"
+    return f"{prefix}..."
+
+
+# =====================================================================
+# Pages & PWA
+# =====================================================================
+
 @app.get("/")
 def index():
     return render_template("index.html")
@@ -112,6 +135,10 @@ def manifest():
         ],
     })
 
+
+# =====================================================================
+# Status & Trends
+# =====================================================================
 
 @app.get("/api/status")
 def status():
@@ -208,14 +235,15 @@ def city_vibe():
 @app.get("/api/suggest_names")
 def suggest_names():
     style = (request.args.get("style") or "club_banger").lower()
-    suggestions = {
+    defaults = {
         "amapiano": ["DJ Ayo", "Kairo Sound", "Luxe Vibes"],
         "dancehall": ["King Riddim", "Bassline Nova", "DJ Sensa"],
         "radio": ["Studio One", "The Pulse Host", "Prime Radio"],
         "club_banger": ["DJ Beshi", "Nova Pulse", "Blast Mode"],
         "afrobeat": ["Afro Pulse", "Sankore", "DJ Mzuri"],
         "trap": ["Trap Crown", "Riot Echo", "Nocturne"],
-    }.get(style, suggestions["club_banger"])
+    }
+    suggestions = defaults.get(style, defaults["club_banger"])
     return jsonify({"success": True, "suggestions": suggestions})
 
 
@@ -261,6 +289,10 @@ def studio_presets():
     }
     return jsonify({"success": True, "presets": presets})
 
+
+# =====================================================================
+# Audio & String Tools
+# =====================================================================
 
 @app.post("/api/process_voice")
 def process_voice():
@@ -309,6 +341,10 @@ def string_tools():
     return jsonify({"success": True, "result": result})
 
 
+# =====================================================================
+# Authentication
+# =====================================================================
+
 @app.post("/api/auth/register")
 def register_user():
     data = request.get_json(silent=True) or {}
@@ -326,7 +362,11 @@ def register_user():
         return jsonify({"success": False, "error": "A user with that email already exists"}), 409
 
     user = db.create_user({"name": name, "email": email, "password": password})
-    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"]}, "token": _issue_token(user["id"])})
+    return jsonify({
+        "success": True,
+        "user": {"id": user["id"], "name": user["name"], "email": user["email"]},
+        "token": _issue_token(user["id"]),
+    })
 
 
 @app.post("/api/auth/login")
@@ -342,7 +382,11 @@ def login_user():
     if not user or not check_password_hash(user["password_hash"], password):
         return jsonify({"success": False, "error": "Invalid email or password"}), 401
 
-    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"]}, "token": _issue_token(user["id"])})
+    return jsonify({
+        "success": True,
+        "user": {"id": user["id"], "name": user["name"], "email": user["email"]},
+        "token": _issue_token(user["id"]),
+    })
 
 
 @app.post("/api/auth/google")
@@ -356,9 +400,17 @@ def google_auth():
 
     user = db.get_user_by_email(email)
     if not user:
-        user = db.create_user({"name": name or "Google User", "email": email, "password": str(uuid.uuid4())})
+        user = db.create_user({
+            "name": name or "Google User",
+            "email": email,
+            "password": str(uuid.uuid4()),
+        })
 
-    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"]}, "token": _issue_token(user["id"])})
+    return jsonify({
+        "success": True,
+        "user": {"id": user["id"], "name": user["name"], "email": user["email"]},
+        "token": _issue_token(user["id"]),
+    })
 
 
 @app.get("/api/auth/me")
@@ -366,7 +418,17 @@ def current_user():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    return jsonify({"success": True, "user": {"id": user["id"], "name": user["name"], "email": user["email"], "theme": user.get("theme", "dark"), "language": user.get("language", "en"), "is_premium": user.get("is_premium", 0)}})
+    return jsonify({
+        "success": True,
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "theme": user.get("theme", "dark"),
+            "language": user.get("language", "en"),
+            "is_premium": user.get("is_premium", 0),
+        },
+    })
 
 
 @app.post("/api/user/profile")
@@ -374,26 +436,30 @@ def update_user_profile():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     data = request.get_json(silent=True) or {}
     profile_data = {
         "name": data.get("name", user["name"]),
         "bio": data.get("bio", ""),
         "avatar_url": data.get("avatar_url", ""),
         "theme": data.get("theme", "dark"),
-        "language": data.get("language", "en")
+        "language": data.get("language", "en"),
     }
-    
+
     db.update_user_profile(user["id"], profile_data)
     return jsonify({"success": True, "user": profile_data})
 
+
+# =====================================================================
+# Presets
+# =====================================================================
 
 @app.post("/api/presets")
 def save_preset():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     data = request.get_json(silent=True) or {}
     preset_id = db.save_preset(user["id"], data)
     return jsonify({"success": True, "preset_id": preset_id})
@@ -404,7 +470,7 @@ def get_presets():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     presets = db.get_presets(user["id"])
     return jsonify({"success": True, "presets": presets})
 
@@ -414,17 +480,21 @@ def delete_preset(preset_id):
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     deleted = db.delete_preset(int(preset_id), user["id"])
     return jsonify({"success": deleted})
 
+
+# =====================================================================
+# Prompt History
+# =====================================================================
 
 @app.post("/api/prompt-history")
 def save_prompt_history():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     data = request.get_json(silent=True) or {}
     db.add_prompt_history(user["id"], data)
     return jsonify({"success": True})
@@ -435,36 +505,40 @@ def get_prompt_history():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     history = db.get_prompt_history(user["id"])
     return jsonify({"success": True, "history": history})
 
+
+# =====================================================================
+# Analytics & Premium
+# =====================================================================
 
 @app.get("/api/analytics")
 def get_analytics():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     analytics = db.get_or_create_analytics(user["id"])
     drops = db.get_drops(user_id=user["id"])
     total_drops = len(drops)
-    
+
     genres = {}
     for drop in drops:
         genre = drop.get("genre", "Unknown")
         genres[genre] = genres.get(genre, 0) + 1
-    
+
     favorite_genre = max(genres, key=genres.get) if genres else None
-    
+
     return jsonify({
         "success": True,
         "analytics": {
             "total_drops": total_drops,
             "favorite_genre": favorite_genre,
             "genre_breakdown": genres,
-            "total_shares": analytics.get("total_shares", 0)
-        }
+            "total_shares": analytics.get("total_shares", 0),
+        },
     })
 
 
@@ -473,15 +547,14 @@ def track_share():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     data = request.get_json(silent=True) or {}
     platform = data.get("platform", "unknown")
-    drop_id = data.get("drop_id")
-    
-    # Log share action and update analytics
+
     db.log_stat(user["id"], f"share_{platform}")
-    db.update_analytics(user["id"], {"total_shares": db.get_or_create_analytics(user["id"])["total_shares"] + 1})
-    
+    current = db.get_or_create_analytics(user["id"])
+    db.update_analytics(user["id"], {"total_shares": current.get("total_shares", 0) + 1})
+
     return jsonify({"success": True})
 
 
@@ -490,10 +563,14 @@ def upgrade_premium():
     user = get_authenticated_user()
     if not user:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     db.set_premium(user["id"], True)
     return jsonify({"success": True, "message": "Welcome to Premium!"})
 
+
+# =====================================================================
+# API Key Management (Fixed & Extended)
+# =====================================================================
 
 @app.get("/api/keys")
 def list_api_keys():
@@ -502,7 +579,18 @@ def list_api_keys():
         return jsonify({"success": False, "error": "Not authenticated"}), 401
 
     keys = db.get_api_keys(user["id"])
-    return jsonify({"success": True, "keys": keys})
+    safe_keys = []
+    for k in keys:
+        safe_keys.append({
+            "id": k.get("id"),
+            "name": k.get("name", "Studio App"),
+            "prefix": _mask_key(k.get("key_prefix", "")),
+            "created_at": k.get("created_at"),
+            "last_used_at": k.get("last_used_at"),
+            "is_active": bool(k.get("is_active", 1)),
+        })
+
+    return jsonify({"success": True, "keys": safe_keys})
 
 
 @app.post("/api/keys")
@@ -512,23 +600,86 @@ def create_api_key():
         return jsonify({"success": False, "error": "Not authenticated"}), 401
 
     data = request.get_json(silent=True) or {}
-    result = db.create_api_key(user["id"], data.get("name") or "Studio App")
-    return jsonify({"success": True, **result})
+    name = (data.get("name") or "Studio App").strip()
+
+    if len(name) < 1 or len(name) > 64:
+        return jsonify({"success": False, "error": "Key name must be 1–64 characters"}), 400
+
+    if db.count_active_api_keys(user["id"]) >= 10:
+        return jsonify({
+            "success": False,
+            "error": "Maximum 10 active API keys allowed. Revoke an old key first.",
+        }), 429
+
+    result = db.create_api_key(user["id"], name)
+
+    return jsonify({
+        "success": True,
+        "id": result["id"],
+        "name": result["name"],
+        "key": result["key"],
+        "prefix": result["prefix"],
+        "warning": "Copy this key now. You will not be able to see it again.",
+    })
+
+
+@app.patch("/api/keys/<int:key_id>")
+def update_api_key(key_id):
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+
+    if not name:
+        return jsonify({"success": False, "error": "Name is required"}), 400
+    if len(name) > 64:
+        return jsonify({"success": False, "error": "Name must be 64 characters or less"}), 400
+
+    updated = db.update_api_key(key_id, user["id"], {"name": name})
+    if not updated:
+        return jsonify({"success": False, "error": "Key not found or access denied"}), 404
+
+    return jsonify({"success": True, "message": "API key renamed"})
+
+
+@app.delete("/api/keys/<int:key_id>")
+def delete_api_key(key_id):
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    deleted = db.delete_api_key(key_id, user["id"])
+    if not deleted:
+        return jsonify({"success": False, "error": "Key not found or access denied"}), 404
+
+    return jsonify({"success": True, "message": "API key revoked"})
 
 
 @app.post("/api/keys/validate")
 def validate_api_key():
     data = request.get_json(silent=True) or {}
     api_key = (data.get("api_key") or "").strip()
+
     if not api_key:
-        return jsonify({"success": False, "error": "API key is required"}), 400
+        return jsonify({"success": False, "valid": False, "error": "API key is required"}), 400
 
     record = db.get_api_key_user(api_key)
     if not record:
-        return jsonify({"success": False, "valid": False, "error": "Invalid API key"}), 401
+        return jsonify({"success": False, "valid": False, "error": "Invalid or revoked API key"}), 401
 
-    return jsonify({"success": True, "valid": True, "user_id": record["user_id"], "name": record["name"]})
+    return jsonify({
+        "success": True,
+        "valid": True,
+        "user_id": record["user_id"],
+        "name": record["name"],
+    })
 
+
+# =====================================================================
+# Creator Toolkit
+# =====================================================================
 
 @app.get("/api/creator-toolkit")
 def creator_toolkit():
@@ -578,6 +729,10 @@ def creator_toolkit():
     })
 
 
+# =====================================================================
+# Library
+# =====================================================================
+
 @app.get("/api/library")
 def get_library():
     drops = db.get_drops()
@@ -599,6 +754,10 @@ def delete_library(drop_id):
     deleted = db.delete_drop(drop_id)
     return jsonify({"success": deleted})
 
+
+# =====================================================================
+# Search & Discover
+# =====================================================================
 
 @app.get("/api/search")
 def search():
@@ -687,6 +846,10 @@ def all_discover_data():
     return jsonify({"success": True, "data": DISCOVER_DATA})
 
 
+# =====================================================================
+# Generation
+# =====================================================================
+
 @app.post("/api/generate")
 def generate_drop():
     data = request.get_json(silent=True) or {}
@@ -746,6 +909,9 @@ def generate_drop():
     ))
 
 
+# =====================================================================
+# Main
+# =====================================================================
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)
-
