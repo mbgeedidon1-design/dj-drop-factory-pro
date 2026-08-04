@@ -1004,6 +1004,7 @@
                             <button class="btn-secondary" onclick="wizardPrev(4)">← Back</button>
                             <button class="btn-primary" onclick="generateDrop()">🔥 Generate Drop</button>
                         </div>
+                        <button class="btn-secondary" onclick="saveCurrentPreset()">⭐ Save These Settings as Preset</button>
                     </div>
                 </div>
             </div>
@@ -1082,6 +1083,7 @@
                         <button class="string-tool-btn" onclick="applyStringTool('stutter_classic')">S-Stutter</button>
                     </div>
                     <button class="btn-primary" onclick="generateDrop()">🔥 Generate Drop</button>
+                    <button class="btn-secondary" onclick="saveCurrentPreset()">⭐ Save These Settings as Preset</button>
                 </div>
             </div>
 
@@ -1174,6 +1176,8 @@
                     <div style="padding: 0 20px 10px;" id="resultImageContainer">
                         <img id="resultImage" style="width:100%;border-radius:12px;margin-bottom:10px;" src="">
                     </div>
+                    <button class="btn-primary" style="margin:0 20px 10px;" onclick="saveToLibrary()">💾 Save to Library</button>
+                    <button class="btn-secondary" style="margin:0 20px 10px;" onclick="copyScript()">📋 Copy Script</button>
                     <button class="btn-secondary" style="margin:10px 0 0 0; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('whatsapp')">💬 WhatsApp</button>
                     <button class="btn-secondary" style="margin:10px 0 0 10px; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('twitter')">𝕏 Tweet</button>
                     <button class="btn-secondary" style="margin:10px 0 0 0; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('instagram')">📸 Instagram</button>
@@ -1341,6 +1345,7 @@
                             <option value="radio">Radio</option>
                         </select>
                     </div>
+                    <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="loadCreatorToolkit()">✨ Get Recommendations</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPresets')">📌 Saved Presets</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenAnalytics')">📊 My Analytics</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPromptHistory')">⏱️ Prompt History</button>
@@ -1434,19 +1439,6 @@
                 <div class="toggle-row" style="cursor: pointer;" onclick="showToast('Voice settings saved')">
                     <div class="toggle-info"><div class="toggle-title">Default Voice</div><div class="toggle-desc">Afro-Vibe (Male NG)</div></div>
                     <span style="color: var(--text-muted); font-size: 20px;">›</span>
-                </div>
-            </div>
-
-            <div class="section-card">
-                <div class="section-header">👑 Premium Features</div>
-                <div style="padding: 16px 20px;">
-                    <div style="background: linear-gradient(135deg, var(--accent), var(--purple)); border-radius: 16px; padding: 20px; margin-bottom: 12px; text-align: center;">
-                        <div style="font-size: 28px; margin-bottom: 8px;">✨</div>
-                        <div style="font-size: 16px; font-weight: 700; color: white; margin-bottom: 6px;">Unlock Premium</div>
-                        <div style="font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.5; margin-bottom: 12px;">Unlimited drops, advanced FX, cloud backup, and more.</div>
-                        <button class="btn-primary" style="margin: 0; width: 100%;" onclick="upgradePremium()">Get Premium</button>
-                    </div>
-                    <div id="premiumStatus" style="display: none; text-align: center; padding: 12px; background: var(--accent-soft); border-radius: 12px; color: var(--accent); font-weight: 600;">✅ You have Premium!</div>
                 </div>
             </div>
 
@@ -1705,6 +1697,7 @@
     </div>
 
     <script>
+
         // ==================== STATE ====================
         let currentScreen = 'screenHome';
         let currentMode = 'ai';
@@ -1771,7 +1764,6 @@
             const chevron = item.querySelector('.faq-chevron');
             const isOpen = answer.style.display === 'block';
 
-            // Close all others (optional - accordion style)
             document.querySelectorAll('.faq-answer').forEach(a => a.style.display = 'none');
             document.querySelectorAll('.faq-chevron').forEach(c => c.style.transform = 'rotate(0deg)');
 
@@ -2161,9 +2153,11 @@
                 const data = await res.json();
                 if (data.success && data.trending) {
                     const row = document.getElementById('trendingGenres');
-                    row.innerHTML = data.trending.slice(0, 4).map(g => 
-                        `<span class="suggestion-chip" onclick="document.getElementById('genre').value='${g.toLowerCase().replace(/\s+/g, '_')}';showToast('🎵 ${g} selected')">${g}</span>`
-                    ).join('');
+                    row.innerHTML = data.trending.slice(0, 4).map(g => {
+                        const safeValue = g.toLowerCase().replace(/\s+/g, '_').replace(/'/g, "\\'");
+                        const safeLabel = g.replace(/'/g, "\\'");
+                        return `<span class="suggestion-chip" onclick="document.getElementById('genre').value='${safeValue}';showToast('🎵 ${safeLabel} selected')">${escapeHtml(g)}</span>`;
+                    }).join('');
                     row.style.display = 'flex';
                 }
             } catch (e) { console.log('Trends offline'); }
@@ -2281,7 +2275,6 @@
                     document.getElementById('resultScript').textContent = result.script;
                     document.getElementById('resultAudio').src = result.download_url;
                     
-                    // Display the generated image
                     const imgEl = document.getElementById('resultImage');
                     if (result.image_url) {
                         imgEl.src = result.image_url;
@@ -2471,7 +2464,6 @@
             }
         }
 
-        // ==================== LIVE ENGINE ====================
         // ==================== DISCOVER SCREEN LOGIC ====================
         async function loadDiscoverAll() {
             await showDiscoverList('all');
@@ -3145,6 +3137,7 @@
         if (premiumStatus && user && user.is_premium) {
             premiumStatus.style.display = 'block';
         }
-        </script>
+
+    </script>
 </body>
 </html>
