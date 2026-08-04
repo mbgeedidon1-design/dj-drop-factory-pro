@@ -48,6 +48,13 @@ def _decode_token(token):
     if len(parts) != 3:
         return None
     user_id, timestamp, signature = parts
+
+    # BUGFIX: previously these were cast with int(...) further down with no
+    # validation, so a malformed/non-numeric token (e.g. "abc:def:ghi") threw
+    # an uncaught ValueError -> Flask 500 instead of a clean "unauthenticated".
+    if not user_id.isdigit() or not timestamp.isdigit():
+        return None
+
     payload = f"{user_id}:{timestamp}"
     expected = hmac.new(
         app.config["SECRET_KEY"].encode("utf-8"),
@@ -102,6 +109,19 @@ def _mask_key(prefix: str) -> str:
     if not prefix:
         return "****"
     return f"{prefix}..."
+
+
+def _sanitize_drop_id(raw_drop_id: str) -> str:
+    """
+    BUGFIX: 'project' was taken straight from client JSON and joined into a
+    filesystem path (os.path.join(Config.GENERATED_DIR, f"{drop_id}.mp3")).
+    A value like '../../../etc/cron.d/evil' would escape GENERATED_DIR and
+    let a client write files elsewhere on disk. Whitelist to safe characters.
+    """
+    if not raw_drop_id:
+        return f"drop_{os.urandom(4).hex()}"
+    cleaned = re.sub(r"[^A-Za-z0-9_\-]", "", str(raw_drop_id))[:64]
+    return cleaned or f"drop_{os.urandom(4).hex()}"
 
 
 # =====================================================================
@@ -391,6 +411,15 @@ def login_user():
 
 @app.post("/api/auth/google")
 def google_auth():
+    # NOTE (flagged, not changed): this endpoint trusts the client-supplied
+    # "email"/"name" with no verification of a real Google ID token. As-is,
+    # anyone can POST an arbitrary email and receive a valid session token
+    # for that account. A real fix needs server-side verification of a
+    # Google id_token (e.g. google-auth's id_token.verify_oauth2_token
+    # against Google's certs) before trusting the email. Left untouched
+    # because that requires knowing whether the frontend sends an id_token
+    # and whether google-auth is an approved dependency -- confirm before
+    # I wire this in so I don't guess at your auth flow.
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "Google User").strip()
     email = (data.get("email") or "").strip().lower()
@@ -751,6 +780,18 @@ def save_library():
 
 @app.delete("/api/library/<drop_id>")
 def delete_library(drop_id):
+    # BUGFIX: this was the only delete endpoint in the file with no auth
+    # check at all -- any anonymous caller could delete any user's saved
+    # drop by id. Brought in line with delete_preset/delete_api_key, which
+    # both require auth + ownership before deleting.
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    owned_drops = db.get_drops(user_id=user["id"])
+    if not any(str(d.get("id")) == str(drop_id) for d in owned_drops):
+        return jsonify({"success": False, "error": "Drop not found or access denied"}), 404
+
     deleted = db.delete_drop(drop_id)
     return jsonify({"success": deleted})
 
@@ -880,7 +921,9 @@ def generate_drop():
             user_stutter=data.get("user_stutter"),
         )
 
-    drop_id = data.get("project") or f"drop_{os.urandom(4).hex()}"
+    # BUGFIX: drop_id (from client field "project") was joined into a
+    # filesystem path with no sanitization -- see _sanitize_drop_id() above.
+    drop_id = _sanitize_drop_id(data.get("project"))
     output_path = os.path.join(Config.GENERATED_DIR, f"{drop_id}.mp3")
     tts_result = tts_engine.generate(
         text=script,
