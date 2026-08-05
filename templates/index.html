@@ -1004,7 +1004,6 @@
                             <button class="btn-secondary" onclick="wizardPrev(4)">← Back</button>
                             <button class="btn-primary" onclick="generateDrop()">🔥 Generate Drop</button>
                         </div>
-                        <button class="btn-secondary" onclick="saveCurrentPreset()">⭐ Save These Settings as Preset</button>
                     </div>
                 </div>
             </div>
@@ -1083,7 +1082,6 @@
                         <button class="string-tool-btn" onclick="applyStringTool('stutter_classic')">S-Stutter</button>
                     </div>
                     <button class="btn-primary" onclick="generateDrop()">🔥 Generate Drop</button>
-                    <button class="btn-secondary" onclick="saveCurrentPreset()">⭐ Save These Settings as Preset</button>
                 </div>
             </div>
 
@@ -1176,8 +1174,6 @@
                     <div style="padding: 0 20px 10px;" id="resultImageContainer">
                         <img id="resultImage" style="width:100%;border-radius:12px;margin-bottom:10px;" src="">
                     </div>
-                    <button class="btn-primary" style="margin:0 20px 10px;" onclick="saveToLibrary()">💾 Save to Library</button>
-                    <button class="btn-secondary" style="margin:0 20px 10px;" onclick="copyScript()">📋 Copy Script</button>
                     <button class="btn-secondary" style="margin:10px 0 0 0; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('whatsapp')">💬 WhatsApp</button>
                     <button class="btn-secondary" style="margin:10px 0 0 10px; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('twitter')">𝕏 Tweet</button>
                     <button class="btn-secondary" style="margin:10px 0 0 0; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('instagram')">📸 Instagram</button>
@@ -1345,7 +1341,6 @@
                             <option value="radio">Radio</option>
                         </select>
                     </div>
-                    <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="loadCreatorToolkit()">✨ Get Recommendations</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPresets')">📌 Saved Presets</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenAnalytics')">📊 My Analytics</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPromptHistory')">⏱️ Prompt History</button>
@@ -1697,7 +1692,6 @@
     </div>
 
     <script>
-
         // ==================== STATE ====================
         let currentScreen = 'screenHome';
         let currentMode = 'ai';
@@ -1764,6 +1758,7 @@
             const chevron = item.querySelector('.faq-chevron');
             const isOpen = answer.style.display === 'block';
 
+            // Close all others (optional - accordion style)
             document.querySelectorAll('.faq-answer').forEach(a => a.style.display = 'none');
             document.querySelectorAll('.faq-chevron').forEach(c => c.style.transform = 'rotate(0deg)');
 
@@ -2153,15 +2148,20 @@
                 const data = await res.json();
                 if (data.success && data.trending) {
                     const row = document.getElementById('trendingGenres');
-                    row.innerHTML = data.trending.slice(0, 4).map(g => {
-                        const safeValue = g.toLowerCase().replace(/\s+/g, '_').replace(/'/g, "\\'");
-                        const safeLabel = g.replace(/'/g, "\\'");
-                        return `<span class="suggestion-chip" onclick="document.getElementById('genre').value='${safeValue}';showToast('🎵 ${safeLabel} selected')">${escapeHtml(g)}</span>`;
-                    }).join('');
+                    row.innerHTML = data.trending.slice(0, 4).map(g =>
+                        `<span class="suggestion-chip" data-genre-value="${escapeAttr(g.toLowerCase().replace(/\s+/g, '_'))}" data-genre-label="${escapeAttr(g)}">${escapeHtml(g)}</span>`
+                    ).join('');
                     row.style.display = 'flex';
                 }
             } catch (e) { console.log('Trends offline'); }
         }
+
+        document.getElementById('trendingGenres').addEventListener('click', (e) => {
+            const chip = e.target.closest('.suggestion-chip');
+            if (!chip) return;
+            document.getElementById('genre').value = chip.dataset.genreValue;
+            showToast(`🎵 ${chip.dataset.genreLabel} selected`);
+        });
 
         async function fetchCityVibe() {
             const city = document.getElementById('city').value.trim();
@@ -2197,13 +2197,20 @@
                 const data = await res.json();
                 if (data.success && data.suggestions) {
                     const row = document.getElementById('nameSuggestions');
-                    row.innerHTML = data.suggestions.slice(0, 4).map(n => 
-                        `<span class="suggestion-chip" onclick="document.getElementById('djName').value='${n.replace(/'/g, "\\'")}';showToast('🎤 ${n} selected')">${n}</span>`
+                    row.innerHTML = data.suggestions.slice(0, 4).map(n =>
+                        `<span class="suggestion-chip" data-name-value="${escapeAttr(n)}">${escapeHtml(n)}</span>`
                     ).join('');
                     row.style.display = 'flex';
                 }
             } catch (e) { console.log('Names offline'); }
         }
+
+        document.getElementById('nameSuggestions').addEventListener('click', (e) => {
+            const chip = e.target.closest('.suggestion-chip');
+            if (!chip) return;
+            document.getElementById('djName').value = chip.dataset.nameValue;
+            showToast(`🎤 ${chip.dataset.nameValue} selected`);
+        });
 
         function onGenreChange() {
             fetchNameSuggestions();
@@ -2275,6 +2282,7 @@
                     document.getElementById('resultScript').textContent = result.script;
                     document.getElementById('resultAudio').src = result.download_url;
                     
+                    // Display the generated image
                     const imgEl = document.getElementById('resultImage');
                     if (result.image_url) {
                         imgEl.src = result.image_url;
@@ -2341,6 +2349,16 @@
             return div.innerHTML;
         }
 
+        // Safe for placing untrusted text inside an HTML attribute value (handles quotes too, unlike escapeHtml)
+        function escapeAttr(str) {
+            return (str == null ? '' : String(str))
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         async function renderLibrary() {
             const list = document.getElementById('libraryList');
             const empty = document.getElementById('libraryEmpty');
@@ -2361,24 +2379,17 @@
                 return;
             }
             empty.style.display = 'none';
-            list.innerHTML = library.map(drop => {
-                const dropId = drop.drop_id || drop.id;
-                const audioUrl = drop.audio_url || drop.url;
-                const dateStr = drop.created_at
-                    ? new Date(drop.created_at).toLocaleDateString()
-                    : (drop.date || 'Unknown');
-                return `
-                    <div class="library-item" data-id="${escapeHtml(dropId)}" data-url="${escapeHtml(audioUrl)}" data-title="${escapeHtml(drop.title)}">
-                        <div class="library-art">🎵</div>
-                        <div class="library-info">
-                            <div class="library-title">${escapeHtml(drop.title)}</div>
-                            <div class="library-meta">${escapeHtml(drop.genre || 'Unknown')} • ${escapeHtml(dateStr)}</div>
-                        </div>
-                        <div class="library-play" data-action="play">▶️</div>
-                        <button class="delete-btn" data-action="delete" aria-label="Delete drop">🗑️</button>
+            list.innerHTML = library.map(drop => `
+                <div class="library-item" data-id="${escapeHtml(drop.id)}" data-url="${escapeHtml(drop.url)}" data-title="${escapeHtml(drop.title)}">
+                    <div class="library-art">🎵</div>
+                    <div class="library-info">
+                        <div class="library-title">${escapeHtml(drop.title)}</div>
+                        <div class="library-meta">${escapeHtml(drop.genre || 'Unknown')} • ${escapeHtml(drop.date)}</div>
                     </div>
-                `;
-            }).join('');
+                    <div class="library-play" data-action="play">▶️</div>
+                    <button class="delete-btn" data-action="delete" aria-label="Delete drop">🗑️</button>
+                </div>
+            `).join('');
         }
 
         document.getElementById('libraryList').addEventListener('click', (e) => {
@@ -2464,6 +2475,7 @@
             }
         }
 
+        // ==================== LIVE ENGINE ====================
         // ==================== DISCOVER SCREEN LOGIC ====================
         async function loadDiscoverAll() {
             await showDiscoverList('all');
@@ -2728,19 +2740,10 @@
                         showToast('⚠️ Google sign-in was cancelled');
                         return;
                     }
-
-                    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-                    const name = payload.name || payload.given_name || 'Google User';
-                    const email = payload.email;
-                    if (!email) {
-                        showToast('⚠️ Google account email is missing');
-                        return;
-                    }
-
                     fetch('/api/auth/google', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, email })
+                        body: JSON.stringify({ credential: response.credential })
                     })
                     .then(res => res.json())
                     .then(data => {
@@ -2814,7 +2817,7 @@
                 list.innerHTML = data.keys.map(key => `
                     <div style="border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--bg-input);">
                         <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(key.name || 'Studio App')}</div>
-                        <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(key.prefix || '')}••••••</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(key.key_prefix || '')}••••••</div>
                     </div>
                 `).join('');
             } catch (err) {
@@ -3137,7 +3140,6 @@
         if (premiumStatus && user && user.is_premium) {
             premiumStatus.style.display = 'block';
         }
-
-    </script>
+        </script>
 </body>
 </html>
