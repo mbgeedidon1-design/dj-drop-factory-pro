@@ -4,9 +4,14 @@ import os
 import re
 import time
 import uuid
+from collections import defaultdict, deque
+from functools import wraps
+from threading import Lock
 from urllib.parse import quote
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
@@ -21,9 +26,48 @@ from modules.tts_engine import TTSManager
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["SECRET_KEY"] = Config.SECRET_KEY
 app.config["UPLOAD_FOLDER"] = os.path.join(Config.STATIC_DIR, "generated", "uploads")
+app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15MB cap on all request bodies
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 tts_engine = TTSManager()
+
+
+# =====================================================================
+# Rate limiting
+# =====================================================================
+
+_rate_lock = Lock()
+_rate_buckets = defaultdict(deque)
+RATE_LIMIT = 10          # requests
+RATE_WINDOW = 60         # seconds
+
+
+def rate_limited(key_prefix):
+    """
+    In-memory per-process rate limiter keyed by client IP. Fine for a single
+    Flask process; if you run multiple workers/instances behind a load
+    balancer, each one keeps its own counters, so swap this for a shared
+    store (e.g. Redis) if you scale out.
+    """
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            ip = request.headers.get("X-Forwarded-For", request.remote_addr) or "unknown"
+            key = f"{key_prefix}:{ip}"
+            now = time.time()
+            with _rate_lock:
+                bucket = _rate_buckets[key]
+                while bucket and now - bucket[0] > RATE_WINDOW:
+                    bucket.popleft()
+                if len(bucket) >= RATE_LIMIT:
+                    return jsonify({
+                        "success": False,
+                        "error": "Rate limit exceeded. Try again shortly.",
+                    }), 429
+                bucket.append(now)
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 # =====================================================================
@@ -315,6 +359,7 @@ def studio_presets():
 # =====================================================================
 
 @app.post("/api/process_voice")
+@rate_limited("process_voice")
 def process_voice():
     audio_file = request.files.get("audio")
     effect = request.form.get("effect", "none")
@@ -411,26 +456,34 @@ def login_user():
 
 @app.post("/api/auth/google")
 def google_auth():
-    # NOTE (flagged, not changed): this endpoint trusts the client-supplied
-    # "email"/"name" with no verification of a real Google ID token. As-is,
-    # anyone can POST an arbitrary email and receive a valid session token
-    # for that account. A real fix needs server-side verification of a
-    # Google id_token (e.g. google-auth's id_token.verify_oauth2_token
-    # against Google's certs) before trusting the email. Left untouched
-    # because that requires knowing whether the frontend sends an id_token
-    # and whether google-auth is an approved dependency -- confirm before
-    # I wire this in so I don't guess at your auth flow.
+    """
+    FIXED: previously trusted a client-supplied name/email with zero proof
+    they came from Google -- anyone could POST an arbitrary email and get a
+    valid session token for that account. Now requires the raw signed
+    Google ID token ("credential") and verifies it against Google's public
+    certs before trusting any claims inside it.
+    """
     data = request.get_json(silent=True) or {}
-    name = (data.get("name") or "Google User").strip()
-    email = (data.get("email") or "").strip().lower()
+    credential = data.get("credential")
+    if not credential:
+        return jsonify({"success": False, "error": "Missing credential"}), 400
 
-    if not email:
-        return jsonify({"success": False, "error": "Email is required"}), 400
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            credential, google_requests.Request(), Config.GOOGLE_CLIENT_ID
+        )
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid Google credential"}), 401
+
+    email = idinfo.get("email")
+    if not email or not idinfo.get("email_verified"):
+        return jsonify({"success": False, "error": "Google email not verified"}), 401
+    name = idinfo.get("name") or idinfo.get("given_name") or "Google User"
 
     user = db.get_user_by_email(email)
     if not user:
         user = db.create_user({
-            "name": name or "Google User",
+            "name": name,
             "email": email,
             "password": str(uuid.uuid4()),
         })
@@ -598,7 +651,7 @@ def upgrade_premium():
 
 
 # =====================================================================
-# API Key Management (Fixed & Extended)
+# API Key Management
 # =====================================================================
 
 @app.get("/api/keys")
@@ -764,7 +817,14 @@ def creator_toolkit():
 
 @app.get("/api/library")
 def get_library():
-    drops = db.get_drops()
+    """
+    FIXED: previously called db.get_drops() with no filter, returning every
+    user's saved drops (names, scripts, download URLs) to any anonymous
+    caller. Now scoped to the authenticated user; anonymous callers get an
+    empty list instead of everyone's data.
+    """
+    user = get_authenticated_user()
+    drops = db.get_drops(user_id=user["id"]) if user else []
     return jsonify({"success": True, "drops": drops})
 
 
@@ -892,6 +952,7 @@ def all_discover_data():
 # =====================================================================
 
 @app.post("/api/generate")
+@rate_limited("generate")
 def generate_drop():
     data = request.get_json(silent=True) or {}
 
