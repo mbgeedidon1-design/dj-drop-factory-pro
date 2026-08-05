@@ -1178,6 +1178,7 @@
                     <button class="btn-secondary" style="margin:10px 0 0 10px; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('twitter')">𝕏 Tweet</button>
                     <button class="btn-secondary" style="margin:10px 0 0 0; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('instagram')">📸 Instagram</button>
                     <button class="btn-secondary" style="margin:10px 0 0 10px; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('tiktok')">🎵 TikTok</button>
+                    <button class="btn-primary" style="margin:16px 0 0 0; width:100%; display:block;" onclick="saveToLibrary()">💾 Save to Library</button>
 
             <div class="credits">
                 Created by <strong>Macdonald Barasa</strong><br>
@@ -1344,7 +1345,8 @@
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPresets')">📌 Saved Presets</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenAnalytics')">📊 My Analytics</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPromptHistory')">⏱️ Prompt History</button>
-                    <button class="btn-secondary" style="margin:0; width:100%;" onclick="loadApiKeyManager()">🔐 API Keys</button>
+                    <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="loadApiKeyManager()">🔐 API Keys</button>
+                    <button class="btn-primary" style="margin:0; width:100%;" onclick="loadCreatorToolkit()">🚀 Generate Recommendations</button>
 
                     <div id="creatorToolkitResults" style="display:none; padding-top:8px;"></div>
                 </div>
@@ -1439,7 +1441,7 @@
 
             <div class="section-card">
                 <div class="section-header">🔐 API Key Studio</div>
-                <div id="apiKeyPanel" style="padding: 16px 20px; display: none;">
+                <div id="apiKeyPanel" style="padding: 16px 20px;">
                     <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px;">Issue secure API keys for your app, clients, or commercial integrations. Share them safely and rotate them anytime.</div>
                     <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="createApiKey()">Create API Key</button>
                     <div id="apiKeyList" style="display:grid; gap:10px;"></div>
@@ -2098,7 +2100,14 @@
             }
         }
 
-        function useAsBackground() { showToast('🎵 Voice effect set as background track'); }
+        function useAsBackground() {
+    if (!processedResult || !processedResult.audio_url) {
+        showToast('⚠️ No processed audio available');
+        return;
+    }
+    localStorage.setItem('df_background_track', processedResult.audio_url);
+    showToast('🎵 Voice effect set as background track');
+}
 
         // ==================== INITIALIZE FEATURE PANELS ====================
         document.addEventListener('DOMContentLoaded', () => {
@@ -2740,10 +2749,19 @@
                         showToast('⚠️ Google sign-in was cancelled');
                         return;
                     }
+
+                    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+                    const name = payload.name || payload.given_name || 'Google User';
+                    const email = payload.email;
+                    if (!email) {
+                        showToast('⚠️ Google account email is missing');
+                        return;
+                    }
+
                     fetch('/api/auth/google', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ credential: response.credential })
+                        body: JSON.stringify({ name, email })
                     })
                     .then(res => res.json())
                     .then(data => {
