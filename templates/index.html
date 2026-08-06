@@ -1004,6 +1004,7 @@
                             <button class="btn-secondary" onclick="wizardPrev(4)">← Back</button>
                             <button class="btn-primary" onclick="generateDrop()">🔥 Generate Drop</button>
                         </div>
+                        <button class="btn-secondary" style="margin: 0 20px 20px;" onclick="saveCurrentPreset()">⭐ Save Current Settings as Preset</button>
                     </div>
                 </div>
             </div>
@@ -1174,11 +1175,12 @@
                     <div style="padding: 0 20px 10px;" id="resultImageContainer">
                         <img id="resultImage" style="width:100%;border-radius:12px;margin-bottom:10px;" src="">
                     </div>
+                    <button class="btn-secondary" style="margin:0 0 10px 0; width:calc(50% - 6px); display:inline-block;" onclick="saveToLibrary()">💾 Save to Library</button>
+                    <button class="btn-secondary" style="margin:0 0 10px 10px; width:calc(50% - 6px); display:inline-block;" onclick="copyScript()">📋 Copy Script</button>
                     <button class="btn-secondary" style="margin:10px 0 0 0; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('whatsapp')">💬 WhatsApp</button>
                     <button class="btn-secondary" style="margin:10px 0 0 10px; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('twitter')">𝕏 Tweet</button>
                     <button class="btn-secondary" style="margin:10px 0 0 0; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('instagram')">📸 Instagram</button>
                     <button class="btn-secondary" style="margin:10px 0 0 10px; width:calc(50% - 6px); display:inline-block;" onclick="shareToSocial('tiktok')">🎵 TikTok</button>
-                    <button class="btn-primary" style="margin:16px 0 0 0; width:100%; display:block;" onclick="saveToLibrary()">💾 Save to Library</button>
 
             <div class="credits">
                 Created by <strong>Macdonald Barasa</strong><br>
@@ -1342,11 +1344,11 @@
                             <option value="radio">Radio</option>
                         </select>
                     </div>
+                    <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="loadCreatorToolkit()">✨ Get Recommendations</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPresets')">📌 Saved Presets</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenAnalytics')">📊 My Analytics</button>
                     <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="showScreen('screenPromptHistory')">⏱️ Prompt History</button>
-                    <button class="btn-secondary" style="margin:0 0 10px 0; width:100%;" onclick="loadApiKeyManager()">🔐 API Keys</button>
-                    <button class="btn-primary" style="margin:0; width:100%;" onclick="loadCreatorToolkit()">🚀 Generate Recommendations</button>
+                    <button class="btn-secondary" style="margin:0; width:100%;" onclick="loadApiKeyManager()">🔐 API Keys</button>
 
                     <div id="creatorToolkitResults" style="display:none; padding-top:8px;"></div>
                 </div>
@@ -1441,7 +1443,7 @@
 
             <div class="section-card">
                 <div class="section-header">🔐 API Key Studio</div>
-                <div id="apiKeyPanel" style="padding: 16px 20px;">
+                <div id="apiKeyPanel" style="padding: 16px 20px; display: none;">
                     <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px;">Issue secure API keys for your app, clients, or commercial integrations. Share them safely and rotate them anytime.</div>
                     <button class="btn-primary" style="margin:0 0 10px 0; width:100%;" onclick="createApiKey()">Create API Key</button>
                     <div id="apiKeyList" style="display:grid; gap:10px;"></div>
@@ -2100,14 +2102,7 @@
             }
         }
 
-        function useAsBackground() {
-    if (!processedResult || !processedResult.audio_url) {
-        showToast('⚠️ No processed audio available');
-        return;
-    }
-    localStorage.setItem('df_background_track', processedResult.audio_url);
-    showToast('🎵 Voice effect set as background track');
-}
+        function useAsBackground() { showToast('🎵 Voice effect set as background track'); }
 
         // ==================== INITIALIZE FEATURE PANELS ====================
         document.addEventListener('DOMContentLoaded', () => {
@@ -2324,7 +2319,10 @@
 
         // ==================== SAVE TO LIBRARY ====================
         async function saveToLibrary() {
-            if (!lastGeneratedDrop) return;
+            if (!lastGeneratedDrop) {
+                showToast('⚠️ Generate a drop first');
+                return;
+            }
             const drop = {
                 id: Date.now(),
                 title: lastGeneratedDrop.script.length > 50 ? lastGeneratedDrop.script.substring(0, 50) + '...' : lastGeneratedDrop.script,
@@ -2389,7 +2387,7 @@
             }
             empty.style.display = 'none';
             list.innerHTML = library.map(drop => `
-                <div class="library-item" data-id="${escapeHtml(drop.id)}" data-url="${escapeHtml(drop.url)}" data-title="${escapeHtml(drop.title)}">
+                <div class="library-item" data-id="${escapeAttr(drop.id)}" data-url="${escapeAttr(drop.url)}" data-title="${escapeAttr(drop.title)}">
                     <div class="library-art">🎵</div>
                     <div class="library-info">
                         <div class="library-title">${escapeHtml(drop.title)}</div>
@@ -2585,7 +2583,7 @@
                 
                 const searchTerm = `${title} ${meta.join(' ')} ${tags.join(' ')}`.trim();
                 return `
-                    <div class="data-item" onclick="openDiscoverSearch('${escapeHtml(searchTerm).replace(/'/g, "\\'")}', '${escapeHtml(title).replace(/'/g, "\\'")}')" role="button" tabindex="0">
+                    <div class="data-item" data-search="${escapeAttr(searchTerm)}" data-label="${escapeAttr(title)}" role="button" tabindex="0">
                         <div class="data-item-title">${escapeHtml(title)}</div>
                         <div class="data-item-meta">${escapeHtml(meta.join(' • '))}</div>
                         ${tags.map(t => `<span class="data-item-tag">${escapeHtml(t)}</span>`).join('')}
@@ -2594,13 +2592,19 @@
             }).join('');
         }
 
+        document.getElementById('discoverList').addEventListener('click', (e) => {
+            const item = e.target.closest('.data-item');
+            if (!item) return;
+            openDiscoverSearch(item.dataset.search, item.dataset.label);
+        });
+
         function renderWebResults(results) {
             const container = document.getElementById('webResults');
             if (!container) return;
             let html = '<div class="section-header" style="margin-top:16px;">🌐 Web Results</div>';
             results.forEach(item => {
                 html += `
-                    <div class="data-item" onclick="window.open('${escapeHtml(item.url)}', '_blank', 'noopener,noreferrer')" style="cursor:pointer;" role="button" tabindex="0">
+                    <div class="data-item" data-url="${escapeAttr(item.url)}" role="button" tabindex="0">
                         <div class="data-item-title">${escapeHtml(item.title)}</div>
                         <div class="data-item-meta">${escapeHtml(item.snippet).substring(0, 150)}…</div>
                         <div class="data-item-tag">🔗 ${escapeHtml(item.source)}</div>
@@ -2610,6 +2614,12 @@
             container.innerHTML = html;
             container.style.display = 'block';
         }
+
+        document.getElementById('webResults').addEventListener('click', (e) => {
+            const item = e.target.closest('.data-item');
+            if (!item || !item.dataset.url) return;
+            window.open(item.dataset.url, '_blank', 'noopener,noreferrer');
+        });
 
         let searchDebounce;
         function debounceSearch(term) {
@@ -2749,19 +2759,10 @@
                         showToast('⚠️ Google sign-in was cancelled');
                         return;
                     }
-
-                    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-                    const name = payload.name || payload.given_name || 'Google User';
-                    const email = payload.email;
-                    if (!email) {
-                        showToast('⚠️ Google account email is missing');
-                        return;
-                    }
-
                     fetch('/api/auth/google', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, email })
+                        body: JSON.stringify({ credential: response.credential })
                     })
                     .then(res => res.json())
                     .then(data => {
